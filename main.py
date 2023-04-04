@@ -225,6 +225,8 @@ if __name__ == '__main__':
 responseHistory = Response(media_type="application/json")
 
 
+get_volatility(symbol='PETR4.SA', start_date='2023-01-01', end_date='2023-02-01')
+
 ## BETA ##
 
 @app.get("stocks/{symbol}/beta")
