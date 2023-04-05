@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='BBFinance',
-    version='1.1.1',
+    version='1.1.7',
     description='Uma biblioteca com o objetivo de adquirir informaçõe de ações do mercado financeiro de maneira rapida e pratica, afim de incluir todos no mercado',
     url='https://github.com/beb0pp/BBFinance',
     author='Luis Abreu',
