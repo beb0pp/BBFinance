@@ -1,0 +1,11 @@
+LICENSE.txt
+requirements.txt
+setup.py
+BBFinance/README.md
+BBFinance/__init__.py
+BBFinance/main.py
+BBFinance.egg-info/PKG-INFO
+BBFinance.egg-info/SOURCES.txt
+BBFinance.egg-info/dependency_links.txt
+BBFinance.egg-info/requires.txt
+BBFinance.egg-info/top_level.txt

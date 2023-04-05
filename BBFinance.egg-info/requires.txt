@@ -1,0 +1,8 @@
+yfinance>=0.2.12
+scipy>=1.9.3
+selenium>=3.141.0
+pandas-datareader>=0.10.0
+json5>=0.9.6
+numpy>=1.23.4
+uvicorn>=0.21.1
+fastapi>=0.95.0

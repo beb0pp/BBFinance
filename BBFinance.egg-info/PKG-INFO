@@ -1,0 +1,13 @@
+Metadata-Version: 2.1
+Name: BBFinance
+Version: 1.1
+Summary: Uma biblioteca com o objetivo de adquirir informaçõe de ações do mercado financeiro de maneira rapida e pratica, afim de incluir todos no mercado
+Home-page: https://github.com/beb0pp/BBFinance
+Author: Luis Abreu
+Author-email: luss.fel@gmail.com
+License: MIT
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.9
+License-File: LICENSE.txt

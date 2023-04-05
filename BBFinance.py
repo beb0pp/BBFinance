@@ -1,7 +1,5 @@
 import yfinance as yf
 from scipy.stats import norm
-from pypfopt.efficient_frontier import EfficientFrontier
-from pypfopt import risk_models, expected_returns
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from fastapi import FastAPI, Response
@@ -101,7 +99,7 @@ if __name__ == '__main__':
 responseHistory = Response(media_type="application/json")
 
 
-## TENDECIA DE PREÇO ##
+## TENDENCIA DE PREÇO ##
 
 @app.get("/stock/{symbol}/trend")
 def get_stock_trend(symbol: str):
@@ -225,8 +223,6 @@ if __name__ == '__main__':
 responseHistory = Response(media_type="application/json")
 
 
-get_volatility(symbol='PETR4.SA', start_date='2023-01-01', end_date='2023-02-01')
-
 ## BETA ##
 
 @app.get("stocks/{symbol}/beta")
@@ -345,37 +341,3 @@ def get_quote(tickers: list):
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000, default="/quote")
 responseHistory = Response(media_type="application/json")
-
-import requests
-
-from pydantic import BaseModel
-
-class User(BaseModel):
-    name: str
-    email: str
-    age: int
-
-@app.post("/users")
-async def create_user(user: User):
-    return {"user": user}
-
-# # Dados que serão enviados na requisição
-# data = {
-#     "name": "João",
-#     "age": 30
-# }
-
-# # Faz a requisição POST enviando os dados
-# response = requests.post("http://localhost:8000/users", json=data)
-
-# # Imprime o status code da resposta
-# print(response.status_code)
-
-# # Imprime o conteúdo da resposta
-# print(response.json())
-
-
-# lista = ["AAPL", "MSFT", "GOOG"]
-
-# response = requests.post("http://127.0.0.1:8000/quote", json={"tickers": lista})
-# print(response.json())
