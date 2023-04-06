@@ -24,9 +24,9 @@ Para instalar a biblioteca, use o seguinte comando:
 Para usar a biblioteca, basta importar o módulo e chamar as funções apropriadas. Aqui está um exemplo de código para coletar as informações de uma ação:
 
 ```python-repl
-import BBFinance
+import BBFinance as bb
 
-get_info('PETR4.SA') -> #Pega as principais informações da ação
+bb.get_info('PETR4.SA') -> #Pega as principais informações da ação
 ```
 
 ## Contribuições

@@ -16,7 +16,7 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 ## INFOS DAS AÇOES ##
-
+@app.get("/stocks/{symbol}/info")
 def get_info(symbol: str):
     
     """
@@ -54,7 +54,7 @@ def get_info(symbol: str):
     print(formatted_json)
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}")
+    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/info")
 response = Response(media_type="application/json")
 
 
@@ -320,8 +320,11 @@ if __name__ == '__main__':
 responseHistory = Response(media_type="application/json")
 
 
-@app.post("/quote")
+## LIST QUOTE ##
+
+@app.post("/listQuote")
 def get_quote(tickers: list):
+
     """
     Recebe uma lista de tickers via método POST e retorna a cotação atual de cada um via método GET.
     """
@@ -335,9 +338,26 @@ def get_quote(tickers: list):
 
     json_data = {'symbol': response}
     
-    formatted_json = json.dumps(json_data, indent=2)
+    formatted_json = json.dumps(json_data, indent=1)
     print(formatted_json)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000, default="/quote")
+    uvicorn.run(app, host="127.0.0.1", port=8000, default="/listQuote")
+responseHistory = Response(media_type="application/json")
+
+@app.get("stocks/AnnualReturn")
+def annual_return(*tickers):
+    """
+    Calcula o retorno anual de um ou mais ativos.
+    """
+    returns = {}
+    for ticker in tickers:
+        data = yf.Ticker('PETR4.SA').history(period="max")
+        data["Year"] = pd.DatetimeIndex(data).year
+        grouped = data.groupby("Year")
+        returns[ticker] = grouped["Close"].last() / grouped["Close"].first() - 1
+    return returns
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000, default="stocks/AnnualReturn")
 responseHistory = Response(media_type="application/json")

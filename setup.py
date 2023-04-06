@@ -1,14 +1,19 @@
 from setuptools import setup
 
+with open(r'Q:\Risco\Novo Risco\pythonrisco\BBFinance\README.md', 'r', encoding='utf-8') as f:
+    long_description = f.read()
+
 setup(
     name='BBFinance',
-    version='1.1.7',
-    description='Uma biblioteca com o objetivo de adquirir informaçõe de ações do mercado financeiro de maneira rapida e pratica, afim de incluir todos no mercado',
+    version='1.1.8',
+    description='Uma biblioteca com o objetivo de adquirir informações de ações do mercado financeiro de maneira rapida e prática, afim de incluir todos no mercado',
     url='https://github.com/beb0pp/BBFinance',
     author='Luis Abreu',
     author_email='luss.fel@gmail.com',
     license='MIT',
     packages=['BBFinance'],
+    long_description= long_description,
+    long_description_content_type='text/markdown',
     install_requires=[
         'yfinance>=0.2.12',
         'scipy>=1.9.3',

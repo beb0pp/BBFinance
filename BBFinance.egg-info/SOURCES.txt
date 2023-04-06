@@ -9,5 +9,6 @@ BBFinance.egg-info/SOURCES.txt
 BBFinance.egg-info/dependency_links.txt
 BBFinance.egg-info/requires.txt
 BBFinance.egg-info/top_level.txt
+BBFinance/__pycache__/BBFinance.cpython-39.pyc
 __pycache__/__init__.cpython-39.pyc
 __pycache__/main.cpython-39.pyc
