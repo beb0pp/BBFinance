@@ -54,19 +54,22 @@ def formataValoresNumero(df, nomeColuna):
 
 ## INFOS DAS AÇOES ##
 @app.get("/stocks/{symbol}/info")
-def get_info(symbol: str):
+def get_info(symbol: str) -> dict:
     
     """
-    Usabilidade -> Busca as principais informaçoes sobre o ativo selecionado como Preço e Dividendos \n
+    ## Usabilidade 
+    - Busca as principais informaçoes sobre o ativo selecionado como Preço e Dividendos \n
     
-    symbol -> Nome do Ativo para a busca \n
+    ## Parâmetros
+    - symbol -> Nome do Ativo para a busca \n
     
     """
     
     try:
         stock = yf.Ticker(symbol)
         info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO
-        if isinstance(info, dict):
+        tipoInfo = type(info)
+        if tipoInfo == dict:
             pass #SE FOR VAI SO PASSAR 
     except:
         return {"error": print("Invalid ticker symbol")}
@@ -98,20 +101,24 @@ response = Response(media_type="application/json")
 ## HISTORICO DAS AÇOES ##
 
 @app.get("/stocks/{symbol}/history")
-def get_stock_history(symbol: str, period: str = '1y'):
+def get_stock_history(symbol: str, period: str = '1y') -> pd.DataFrame:
     
     """
-    Usabilidade -> Usada para verificar o histórico da açao selecionada e em qual periodo \n
+    ## Usabilidade 
+    - Usada para verificar o histórico da açao selecionada e em qual periodo \n
     
-    symbol -> Nome do Ativo para a busca \n
-    period -> Data em ANOS para a busca das informaçoes do Ativo \n
+    ## Parâmetros
+    
+    - symbol -> Nome do Ativo para a busca \n
+    - period -> Data em ANOS para a busca das informaçoes do Ativo \n
     
     """
     
     try:
         stock = yf.Ticker(symbol)
         info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO
-        if isinstance(info, dict):
+        tipoInfo = type(info)
+        if tipoInfo == dict:
             pass #SE FOR VAI SO PASSAR 
     except:
         return {"error": print("Invalid ticker symbol")}
@@ -123,7 +130,7 @@ def get_stock_history(symbol: str, period: str = '1y'):
     else:
         history_dict = history.to_dict(orient="list")
         history_df = pd.DataFrame.from_dict(history_dict).reset_index(drop=False)     
-        print(history_df)
+        return print(history_df)
         # json_data = {'symbol': symbol,
         # "history":  history_df.to_dict(orient="records"),
         # }
@@ -139,19 +146,23 @@ responseHistory = Response(media_type="application/json")
 ## TENDENCIA DE PREÇO ##
 
 @app.get("/stock/{symbol}/trend")
-def get_stock_trend(symbol: str):
+def get_stock_trend(symbol: str) -> dict:
     
     """
-    Usabilidade -> Identifica a tendencia de preço de uma açao, se ira ser de ALTA ou BAIXA
+    ## Usabilidade 
+    - Identifica a tendencia de preço de uma açao, se ira ser de ALTA ou BAIXA
     
-    symbol -> Nome do Ativo para a busca \n
+    ## Parâmetros
+    
+    - symbol -> Nome do Ativo para a busca \n
     
     """
     
     try:
         stock = yf.Ticker(symbol)
         info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO
-        if isinstance(info, dict):
+        tipoInfo = type(info)
+        if tipoInfo == dict:
             pass #SE FOR VAI SO PASSAR 
     except:
         return {"error": print("Invalid ticker symbol")}
@@ -175,21 +186,26 @@ responseHistory = Response(media_type="application/json")
 ## RSI ##
 
 @app.get("/stock/{symbol}/technical")
-def get_stock_technicals(symbol: str):
+def get_stock_technicals(symbol: str) -> dict:
     
     """
-    Usabilidade -> cálculo envolve a comparação da média de ganhos em um período de tempo com a média de perdas em um período de tempo. \n
-    Como interpretar -> Quando o RSI está acima de 70, o ativo é considerado sobrecomprado, o que significa que pode estar prestes a sofrer uma correção para baixo. 
+    ## Usabilidade 
+    - cálculo envolve a comparação da média de ganhos em um período de tempo com a média de perdas em um período de tempo. \n
+    
+    ## Como interpretar 
+    - Quando o RSI está acima de 70, o ativo é considerado sobrecomprado, o que significa que pode estar prestes a sofrer uma correção para baixo. 
     Quando o RSI está abaixo de 30, o ativo é considerado sobrevendido, o que significa que pode estar prestes a subir novamente. \n 
     
-    symbol -> Nome do Ativo para a busca \n
+    ## Parâmetros
+    - symbol -> Nome do Ativo para a busca \n
     
     """
     
     try:
         stock = yf.Ticker(symbol)
         info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO, SENAO VAI PASSAR
-        if isinstance(info, dict):
+        tipoInfo = type(info)
+        if tipoInfo == dict:
             pass 
     except:
         return {"error": print("Invalid ticker symbol")}
@@ -234,14 +250,16 @@ responseHistory = Response(media_type="application/json")
 ## VOLATILIDADE ##
 
 @app.get("stocks/{symbol}/volatility")
-def get_volatility(symbol: str, start_date: str, end_date: str):
+def get_volatility(symbol: str, start_date: str, end_date: str) -> str:
     
     """
-    Usabilidade -> Método usado para verificar a volatilidade de um ativo em comparacao ao mercado em que esta  \n
+    ## Usabilidade 
+    - Método usado para verificar a volatilidade de um ativo em comparacao ao mercado em que esta  \n
     
-    symbol -> Nome do Ativo para a busca \n
-    start_date -> Data de Inicio da busca das infos (preco, volume, etc) do ativo \n
-    end_date -> Data Final para a busca das infos (preco, volume, etc) do ativo \n
+    ## Parâmetros
+    - symbol -> Nome do Ativo para a busca \n
+    - start_date -> Data de Inicio da busca das infos (preco, volume, etc) do ativo \n
+    - end_date -> Data Final para a busca das infos (preco, volume, etc) do ativo \n
     """
     
     try:
@@ -263,14 +281,16 @@ responseHistory = Response(media_type="application/json")
 ## BETA ##
 
 @app.get("stocks/{symbol}/beta")
-def get_beta(symbol: str):
+def get_beta(symbol: str) -> dict:
     
     """
-    Usabilidade -> O beta é uma medida estatística que indica a relação entre a volatilidade de uma ação e a volatilidade do mercado como um todo.
+    ## Usabilidade 
+    - O beta é uma medida estatística que indica a relação entre a volatilidade de uma ação e a volatilidade do mercado como um todo.
     O valor do beta é utilizado para medir o risco de uma ação em relação ao mercado em que ela é negociada. \n
     
-    symbol -> Nome do Ativo para a busca \n
-    market -> Como padrao, Mercado: IBOVESPA / BVSP
+    ## Parâmetros
+    - symbol -> Nome do Ativo para a busca \n
+    - market -> Como padrao, Mercado: IBOVESPA / BVSP
     """
     
     # Obter os dados do ativo e do mercado
@@ -279,7 +299,8 @@ def get_beta(symbol: str):
         market = yf.Ticker("^BVSP") # Índice Bovespa como mercado de referência
         info = asset.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO, SENAO VAI PASSAR
         infoMarket = market.info
-        if isinstance(info, dict) | isinstance(infoMarket, dict) :
+        tipoInfo = type(info)
+        if tipoInfo == dict | infoMarket == dict:
             pass 
     except:
         return {"error": print("Invalid ticker symbol")}
@@ -316,15 +337,30 @@ responseHistory = Response(media_type="application/json")
 
 
 ## VAR ##
+    
+@app.get("stocks/{symbol}/VaR")
+def var(symbol: str, confidence_level: float, lookback_period: int) -> dict:
+    
+    """
+    ## Usabilidade 
+    - O Value at Risk (VaR) é uma medida de risco que indica a perda máxima esperada, com um determinado nível de confiança, em um intervalo de tempo pré-determinado. \n
+    
+    ## Parâmetros
+    
+    - symbol -> Nome do Ativo para fazer a busca \n
+    - confidence_level -> Nivel de confiança para o VAR (0 a 1), normalmente usado em 0.95 \n
+    - lookback_period -> Periodo EM DIAS a ser considerado para o cálculo do VaR
 
-def calculate_historical_var(symbol: str, confidence_level: float, lookback_period: int) -> float:
+    """
+    
     try:
         stock = yf.Ticker(symbol)
         info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO, SENAO VAI PASSAR
-        if isinstance(info, dict):
-            pass 
+        tipoInfo = type(info)
+        if tipoInfo == dict:
+            pass
     except:
-        return {"error": print("Invalid ticker symbol")}
+         print("Invalid ticker symbol")
 
     # Obter os dados de preços do ativo
     prices = stock.history(period=f"{lookback_period}d")["Close"]
@@ -336,28 +372,16 @@ def calculate_historical_var(symbol: str, confidence_level: float, lookback_peri
     std_dev = returns.std()
     var = std_dev * norm.ppf(1 - confidence_level)
 
-    return round(var * prices[-1], 2)
-
-@app.get("stocks/{symbol}/VaR")
-def var(symbol: str, confidence_level: float, lookback_period: int):
-    
-    """
-    Usabilidade -> O Value at Risk (VaR) é uma medida de risco que indica a perda máxima esperada, com um determinado nível de confiança, em um intervalo de tempo pré-determinado. \n
-    
-    symbol -> Nome do Ativo para fazer a busca \n
-    confidence_level -> Nivel de confiança para o VAR (0 a 1), normalmente usado em 0.95 \n
-    lookback_period -> Periodo EM DIAS a ser considerado para o cálculo do VaR
-
-    """
-    
-    return {"VaR": print(calculate_historical_var(symbol, confidence_level, lookback_period))}
+    return print({"VaR": round(var * prices[-1], 2)})
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/VaR")
 responseHistory = Response(media_type="application/json")
 
 
-## LIST QUOTE ##
+
+
+## CARTEIRA DE ATIVOS ##
 
 @app.get("stocks/{symbol}/AnnualReturn", response_model=None)
 def carteira_ativos(symbols: Union[str, list], start_date: str, end_date: str) -> pd.DataFrame:
@@ -463,6 +487,8 @@ if __name__ == "__main__":
 responseHistory = Response(media_type="application/json")
 
 
+## ALOCAÇAO DE MARKOWITZ ##
+
 @app.get("stocks/{symbol}/MarkowitzAllocationn")
 def markowitz_allocation(symbols= list, star_date= str, end_date=str) -> str: 
     
@@ -525,7 +551,7 @@ if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000, default="stocks/{symbol}/MarkowitzAllocation")
 responseHistory = Response(media_type="application/json")
 
-
+## BUSCA INFO DE FUNDOS ##
 
 @app.get("/infoFunds", response_model=None)
 def get_funds(symbol= str) -> pd.DataFrame:
@@ -546,10 +572,44 @@ if __name__ == "__main__":
 responseHistory = Response(media_type="application/json")
 
 
+## COMPARADOR DE FUNDOS COM BASE NO SETOR ##
 
 @app.get("/compareSetorFunds")
-def compare_setor_funds(setor: TipoSetores, rentabilidade_min = 0) -> pd.DataFrame:
-        
+def compare_setor_funds(setor= TipoSetores, rentabilidade_min = 0) -> pd.DataFrame:
+    
+    """
+    ## Usabilidade
+    
+    - Funçao que utiliza as metricas e medias dos fundo com base no seu Setor para uma analise mais restrita
+    
+    ## Parâmetros
+    
+    - rentabilidade_min -> Valor em % para buscar a rentabilidade minima do fundo escolhido
+    - setor -> Setores de fundos que poderam ser escolhidos, segue a lista:
+    
+    ```
+    TiposSetores:
+    - Corporativas = "Lajes Corporativas" 
+    - Mobiliarios = "Títulos e Val. Mob."
+    - Shoppings = "Shoppings"
+    - Hibridos = 'Híbrido'
+    - Renda = 'Renda'
+    - Logistica = 'Logística'
+    - Hospital = 'Hospital'
+    - Residencial = 'Residencial'
+    - Outros = 'Outros'
+
+    ```
+    
+    ## Exemplo:
+    
+    ```
+    >>> bb.compare_setor_funds(setor='Corporativas', rentabilidade_min = 3)
+    ```
+    
+    
+    """
+    
     url = "https://www.fundsexplorer.com.br/ranking"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -580,8 +640,33 @@ if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000, default="/compareSetorFunds")
 responseHistory = Response(media_type="application/json")
 
-lista = ['MXRF11.SA', 'VGIR11.SA']
+
+## COMPARADOR DE FUNDOS ##
+
+@app.get("/compareFunds")
 def compare_funds(listfund= None, fund_1= str, fund_2= str) -> pd.DataFrame:
+    """
+    ## Usabilidade 
+    
+    - Funçao que realiza a comparaçao entre dois fundos, seja feita a requisiçao dos fundos via lista ou unicos 
+    - Requisiçao Listas: Retorna o fundo com maior porcentagem de risco (a variação percentual dos preços dos ativos, calculo realizado com base no desvio padrão)
+    - Requisiçao Unica: Retorna um Dataframe com as principais informaçoes dos fundos, afim de uma comparaçao entre seus valores \n
+    
+    ## Parâmetros
+    
+    - listfund -> Lista dos fundos para analise de risco
+    - fund_1 -> Primeiro fundo para analise unica
+    - fund_2 -> Segundo fundo para analise unica
+    
+    ## Exemplos:
+    
+    ```
+    >>> bb.compare_funds(listfund= list) 
+                    ou
+    >>> bb.compare_funds(fund_1= 'fund1', fund_2= 'fund2')
+    ```
+    
+    """
 
     if fund_1 and fund_2 != None:
         url = "https://www.fundsexplorer.com.br/ranking"
@@ -607,7 +692,7 @@ def compare_funds(listfund= None, fund_1= str, fund_2= str) -> pd.DataFrame:
     else:
         max_risco = -1
         ticker_max_risco = ''
-        for ticker in lista:
+        for ticker in listfund:
             fundo = yf.Ticker(ticker)
             df = fundo.history(period='max')
             desvio_padrao = df['Close'].pct_change().std()
@@ -616,11 +701,14 @@ def compare_funds(listfund= None, fund_1= str, fund_2= str) -> pd.DataFrame:
                 ticker_max_risco = ticker
             
         valuerisk = pd.DataFrame({'Fund' : ticker_max_risco,
-                    'Max risk (%)' : max_risco * 100}, index=[len(lista)])
+                    'Max risk (%)' : max_risco * 100}, index=[len(listfund)])
         
         if valuerisk.empty:
-            print('Nao foram apresentado dados dos fundos para verificaçao multipla')
+            print('Nao foram apresentado dados dos fundos para verificaçao múltipla')
         else:
             print(valuerisk)
+            
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000, default="/compareFunds")
+responseHistory = Response(media_type="application/json")
 
-compare_funds(listfund=['MXRF11.SA', 'VGIR11.SA'])
