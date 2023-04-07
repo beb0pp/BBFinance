@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: BBFinance
-Version: 1.1.8
+Version: 1.1.9
 Summary: Uma biblioteca com o objetivo de adquirir informações de ações do mercado financeiro de maneira rapida e prática, afim de incluir todos no mercado
 Home-page: https://github.com/beb0pp/BBFinance
 Author: Luis Abreu
@@ -39,9 +39,9 @@ Para instalar a biblioteca, use o seguinte comando:
 Para usar a biblioteca, basta importar o módulo e chamar as funções apropriadas. Aqui está um exemplo de código para coletar as informações de uma ação:
 
 ```python-repl
-import BBFinance
+import BBFinance as bb
 
-get_info('PETR4.SA') -> #Pega as principais informações da ação
+bb.get_info('PETR4.SA') -> #Pega as principais informações da ação
 ```
 
 ## Contribuições

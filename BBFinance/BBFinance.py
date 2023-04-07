@@ -1,19 +1,56 @@
+#BIBLIOTECAS PARA ANALISE DE ATIVOS
 import yfinance as yf
 from scipy.stats import norm
+
+#BIBLIOTECAS PARA WEBSCRAPING
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+import chromedriver_autoinstaller
+import requests
+from bs4 import BeautifulSoup
+
+#BIBLIOTECAS DE CHAMADAS DE API
 from fastapi import FastAPI, Response
 from fastapi.templating import Jinja2Templates
 import json
 import uvicorn
+
+#BIBLIOTECAS DE ANALISE DE DATAFRAMES, DADOS E CRIAÇAO DE CLASSES
 import pandas as pd
 import numpy as np
-yf.pdr_override()
+from enum import Enum
+from pydantic import BaseModel
+from typing import List, Union, Optional
+
 import warnings
 warnings.filterwarnings("ignore")
 
+# chromedriver_autoinstaller.install()
+yf.pdr_override()
+
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
+
+class TipoSetores(str, Enum):
+    Corporativas = "Lajes Corporativas"
+    Mobiliarios = "Títulos e Val. Mob."
+    Shoppings = "Shoppings"
+    Hibridos = 'Híbrido'
+    Renda = 'Renda'
+    Logistica = 'Logística'
+    Hospital = 'Hospital'
+    Residencial = 'Residencial'
+    Outros = 'Outros'
+
+def formataValoresNumero(df, nomeColuna):
+    df[nomeColuna] = df[nomeColuna].replace('[.]', '', regex=True)
+    df[nomeColuna] = df[nomeColuna].replace('[%]', '', regex=True)
+    df[nomeColuna] = df[nomeColuna].replace('[,]', '.', regex=True)
+    df[nomeColuna] = df[nomeColuna].astype(float)
+
+    return df
 
 ## INFOS DAS AÇOES ##
 @app.get("/stocks/{symbol}/info")
@@ -322,42 +359,268 @@ responseHistory = Response(media_type="application/json")
 
 ## LIST QUOTE ##
 
-@app.post("/listQuote")
-def get_quote(tickers: list):
-
+@app.get("stocks/{symbol}/AnnualReturn", response_model=None)
+def carteira_ativos(symbols: Union[str, list], start_date: str, end_date: str) -> pd.DataFrame:
     """
-    Recebe uma lista de tickers via método POST e retorna a cotação atual de cada um via método GET.
-    """
-    response = {}
-    for ticker in tickers:
-        try:
-            data = yf.Ticker(ticker).info
-            response[ticker] = data['regularMarketPrice']
-        except:
-            response[ticker] = "Ticker inválido"
-
-    json_data = {'symbol': response}
+    ## Usabilidade
+    - Recebe uma lista e retorna um DataFrame com as informações dos ativos e algumas estatísticas básicas. \n
     
-    formatted_json = json.dumps(json_data, indent=1)
+    ## Parâmetros
+    - symbols -> Recebe uma lista ou um unico ativo para buscar na base \n
+    - start_date -> Data de Inicio da busca das infos (preco, volume, etc) do ativo \n
+    - end_date -> Data Final para a busca das infos (preco, volume, etc) do ativo \n
+    
+    """
+    # Importar dados dos ativos
+    
+    if isinstance(symbols, str):
+        print(f"Você digitou uma string: {symbols}")
+        dados = yf.download(tickers= symbols, start= start_date, end= end_date, group_by= 'ticker')
+            
+        try:
+            #Exibe o preço a mercado da açao
+            data = yf.Ticker(symbols).info
+            valueMarket = data['regularMarketPrice']
+            
+            #Retorna o preço de fechamento da açao
+            close = dados['Close']
+            
+            # Calcular retornos diários
+            retorno_diario = close.pct_change()
+            
+            # Calcular retornos anuais
+            retorno_anual = retorno_diario.mean() * 252
+                    
+            # Calcular desvio padrão anual
+            desvio_padrao_anual = retorno_diario.std() * (252 ** 0.5)
+            
+            # Calcular valor total investido
+            valor_investido = close.iloc[0] * 100
+            
+            # Calcular valor atual
+            valor_atual = close.iloc[-1] * 100
+            
+            # Calcular retorno total
+            retorno_total = (valor_atual - valor_investido) / valor_investido
+            
+            # Organizar em um DataFrame
+            valueSymbols = pd.DataFrame({
+                'Ativo' : symbols,
+                'Preço a Mercado' : valueMarket,
+                'Retorno anual': retorno_anual,
+                'Desvio padrão anual': desvio_padrao_anual,
+                'Retorno total': retorno_total
+            }, index=[1])
+            
+            print(valueSymbols)
+
+        except:
+            print("Ticker inválido")
+  
+    elif isinstance(symbols, list):
+        valueDF = pd.DataFrame()
+        print(f"Você digitou uma lista: {symbols}")
+        for simbolo in symbols:
+            dados = yf.download(tickers= simbolo, start= start_date, end= end_date, group_by= 'ticker')
+        
+            # Selecionar preços de fechamento
+            close = dados['Close']
+            
+            # Calcular retornos diários
+            retorno_diario = close.pct_change()
+            
+            # Calcular retornos anuais
+            retorno_anual = retorno_diario.mean() * 252
+                        
+            # Calcular desvio padrão anual
+            desvio_padrao_anual = retorno_diario.std() * (252 ** 0.5)
+            
+            # Calcular valor total investido
+            valor_investido = close.iloc[0] * 100
+            
+            # Calcular valor atual
+            valor_atual = close.iloc[-1] * 100
+            
+            # Calcular retorno total
+            retorno_total = (valor_atual - valor_investido) / valor_investido
+            
+            # Organizar em um DataFrame
+            returnSymbols = pd.DataFrame({
+                'Ativo' : simbolo,
+                'Retorno anual': retorno_anual,
+                'Desvio padrão anual': desvio_padrao_anual,
+                'Retorno total': retorno_total
+            }, index=[len(symbols)])
+            
+            valueDF = pd.concat([returnSymbols, valueDF])
+        print(valueDF)
+
+    else:
+        print("Tipo inválido. Digite uma string ou uma lista.")
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000, default="stocks/{symbol}/AnnualReturn")
+responseHistory = Response(media_type="application/json")
+
+
+@app.get("stocks/{symbol}/MarkowitzAllocationn")
+def markowitz_allocation(symbols= list, star_date= str, end_date=str) -> str: 
+    
+    """
+    ## Usabilidades 
+    Alocação de Markowitz é uma técnica de otimização de portfólio que visa encontrar a combinação ideal de ativos para maximizar o retorno do investimento enquanto minimiza o risco. \n
+    
+    ## O Retorno Esperado
+    - representa a taxa de retorno média que se espera obter do portfólio de investimentos \n
+    ## O Risco 
+    - representa a medida de volatilidade do portfólio, ou seja, 
+    quanto mais instável for o retorno dos ativos, maior será o risco do portfólio como um todo \n
+    
+    ## Parâmetros
+    
+    - symbols -> Recebe uma lista de ativos para buscar na base \n
+    - start_date -> Data de Inicio da busca das infos (preco, volume, etc) do ativo \n
+    - end_date -> Data Final para a busca das infos (preco, volume, etc) do ativo \n
+
+    """
+    
+    dados = yf.download(symbols, start=star_date, end=end_date)['Adj Close']
+
+    # Calculando os retornos diários dos ativos
+    retornos = dados.pct_change().dropna()
+
+    # Calculando a matriz de covariância dos retornos
+    matriz_covariancia = retornos.cov()
+
+    # Definindo o vetor de pesos de igual peso para todos os ativos
+    pesos = np.array([1/len(lista)] * len(lista))
+
+    # Calculando o retorno esperado e o risco da carteira com pesos iguais
+    retorno_esperado = np.sum(retornos.mean() * pesos) * 252
+    risco = np.sqrt(np.dot(pesos.T, np.dot(matriz_covariancia, pesos))) * np.sqrt(252)
+
+    # Imprimindo os resultados
+    # print("Retorno esperado: ", retorno_esperado)
+    # print("Risco: ", risco) 
+    
+    # Calculando a alocação de Markowitz
+    cov_inv = np.linalg.inv(matriz_covariancia)
+    vetor_uns = np.ones((len(lista),1))
+    w_markowitz = np.dot(cov_inv, vetor_uns) / np.dot(np.dot(vetor_uns.T, cov_inv), vetor_uns)
+    w_markowitz = w_markowitz.flatten()
+
+    # Imprimindo a alocação de Markowitz
+    markowitzList = []
+    for i in range(len(lista)):
+        taxas = f"O ativo {lista[i]} deve ser alocado em {w_markowitz[i] * 100:.2f}% da carteira"
+        markowitzList.append(taxas)
+    json_data = {'Retorno Esperado' : retorno_esperado,
+                 'Risco da Carteira' : risco,
+                 'Alocacao Markowitz' : markowitzList}
+    
+    formatted_json = json.dumps(json_data, indent=2)
     print(formatted_json)
-
+    
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000, default="/listQuote")
+    uvicorn.run(app, host="127.0.0.1", port=8000, default="stocks/{symbol}/MarkowitzAllocation")
 responseHistory = Response(media_type="application/json")
 
-@app.get("stocks/AnnualReturn")
-def annual_return(*tickers):
-    """
-    Calcula o retorno anual de um ou mais ativos.
-    """
-    returns = {}
-    for ticker in tickers:
-        data = yf.Ticker('PETR4.SA').history(period="max")
-        data["Year"] = pd.DatetimeIndex(data).year
-        grouped = data.groupby("Year")
-        returns[ticker] = grouped["Close"].last() / grouped["Close"].first() - 1
-    return returns
+
+
+@app.get("/infoFunds", response_model=None)
+def get_funds(symbol= str) -> pd.DataFrame:
+    url = "https://www.fundsexplorer.com.br/ranking"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, "html.parser")
+    table = soup.find_all("table")[0]
+    fundsDF = pd.read_html(str(table))[0]    
+    fundsDF['Código do fundo'] = fundsDF['Código do fundo'].apply(lambda x: x+'.SA')
+        
+    valuesFI = fundsDF.loc[(fundsDF['Código do fundo'] == symbol)]
+    valuesFI = valuesFI[['Código do fundo', 'Setor', 'Preço Atual', 'Dividendo', 'Variação Preço', "Rentab. Período"]]
+    
+    return print(valuesFI)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000, default="stocks/AnnualReturn")
+    uvicorn.run(app, host="127.0.0.1", port=8000, default="/infoFunds")
 responseHistory = Response(media_type="application/json")
+
+
+
+@app.get("/compareSetorFunds")
+def compare_setor_funds(setor: TipoSetores, rentabilidade_min = 0) -> pd.DataFrame:
+        
+    url = "https://www.fundsexplorer.com.br/ranking"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, "html.parser")
+    table = soup.find_all("table")[0]
+    fundsDF = pd.read_html(str(table))[0]
+
+    formataValoresNumero(fundsDF, "Rentab. Período")
+    rentabilidade_min = rentabilidade_min / 100
+    valuesFI = fundsDF.loc[(fundsDF["Rentab. Período"]/100) > rentabilidade_min]
+    valuesFI = valuesFI[['Código do fundo', 'Setor', 'Preço Atual', 'Dividendo', 'Variação Preço', "Rentab. Período"]]
+    valuesFI = valuesFI.dropna()
+    rentabilidade_media = valuesFI['Rentab. Período'].mean()
+    rentabilidade_mercado = valuesFI.loc[valuesFI["Setor"] == setor]["Rentab. Período"].mean()
+    
+    desvio_padrao = valuesFI["Rentab. Período"].std()
+    
+    resultados = pd.DataFrame({
+        "Rentabilidade Média dos FIIs Selecionados": [rentabilidade_media],
+        "Rentabilidade Média do Mercado": [rentabilidade_mercado],
+        "Desvio Padrão das Rentabilidades dos FIIs Selecionados": [desvio_padrao]
+    })
+    
+    resultados = resultados.fillna('O setor/valor nao foi encontrado')
+    
+    return print(resultados)
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000, default="/compareSetorFunds")
+responseHistory = Response(media_type="application/json")
+
+lista = ['MXRF11.SA', 'VGIR11.SA']
+def compare_funds(listfund= None, fund_1= str, fund_2= str) -> pd.DataFrame:
+
+    if fund_1 and fund_2 != None:
+        url = "https://www.fundsexplorer.com.br/ranking"
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, "html.parser")
+        table = soup.find_all("table")[0]
+        fundsDF = pd.read_html(str(table))[0]    
+        fundsDF['Código do fundo'] = fundsDF['Código do fundo'].apply(lambda x: x+'.SA')
+        fundsDF = fundsDF[['Código do fundo', 'Setor', 'Preço Atual', 'Dividendo', 'Variação Preço', "Rentab. Período", 'Dividend Yield', 'DY (3M) Acumulado']]
+        fundsDF = fundsDF.drop_duplicates(subset=['Código do fundo'])
+        
+        fund1 = fundsDF.loc[fundsDF["Código do fundo"] == fund_1]
+        fund2 = fundsDF.loc[fundsDF["Código do fundo"] == fund_2]
+
+        unit = pd.concat([fund1, fund2])
+        if unit.empty:
+            print('Nao foram apresentado dados dos fundos para verificaçao unica')
+        else:
+            print(unit)
+        
+    if listfund is None:
+        listfund = []
+    else:
+        max_risco = -1
+        ticker_max_risco = ''
+        for ticker in lista:
+            fundo = yf.Ticker(ticker)
+            df = fundo.history(period='max')
+            desvio_padrao = df['Close'].pct_change().std()
+            if desvio_padrao > max_risco:
+                max_risco = desvio_padrao
+                ticker_max_risco = ticker
+            
+        valuerisk = pd.DataFrame({'Fund' : ticker_max_risco,
+                    'Max risk (%)' : max_risco * 100}, index=[len(lista)])
+        
+        if valuerisk.empty:
+            print('Nao foram apresentado dados dos fundos para verificaçao multipla')
+        else:
+            print(valuerisk)
+
+compare_funds(listfund=['MXRF11.SA', 'VGIR11.SA'])
