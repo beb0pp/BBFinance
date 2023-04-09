@@ -1,6 +1,7 @@
 #BIBLIOTECAS PARA ANALISE DE ATIVOS
 import yfinance as yf
 from scipy.stats import norm
+from scipy.optimize import minimize
 
 #BIBLIOTECAS PARA WEBSCRAPING
 from selenium import webdriver
@@ -12,7 +13,9 @@ import requests
 from bs4 import BeautifulSoup
 
 #BIBLIOTECAS DE CHAMADAS DE API
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import json
 import uvicorn
@@ -20,6 +23,7 @@ import uvicorn
 #BIBLIOTECAS DE ANALISE DE DATAFRAMES, DADOS E CRIAÇAO DE CLASSES
 import pandas as pd
 import numpy as np
+from datetime import datetime, timedelta
 from enum import Enum
 from pydantic import BaseModel
 from typing import List, Union, Optional
@@ -30,8 +34,25 @@ warnings.filterwarnings("ignore")
 # chromedriver_autoinstaller.install()
 yf.pdr_override()
 
+today = datetime.today()
+# Data de um ano atrás
+one_year_ago = today - timedelta(days=365)
+
+# Convertendo as datas para strings com formato yyyy-mm-dd
+oneY = one_year_ago.strftime('%Y-%m-%d')
+currently = today.strftime('%Y-%m-%d')
+
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="Site")
+# app.mount("/Static", StaticFiles(directory="Static"), name="Static")
+
+# @app.get("/", response_class=HTMLResponse)
+# async def read_root(request: Request):
+#     return templates.TemplateResponse("index.html", {"request": request})
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="127.0.0.1", port=8000)
+
 
 class TipoSetores(str, Enum):
     Corporativas = "Lajes Corporativas"
@@ -44,6 +65,11 @@ class TipoSetores(str, Enum):
     Residencial = 'Residencial'
     Outros = 'Outros'
 
+class TipoPerfis(str, Enum):
+    Agressivo = 'Agressivo'
+    Moderado = 'Moderado'
+    Conservador = 'Conservador'
+
 def formataValoresNumero(df, nomeColuna):
     df[nomeColuna] = df[nomeColuna].replace('[.]', '', regex=True)
     df[nomeColuna] = df[nomeColuna].replace('[%]', '', regex=True)
@@ -53,7 +79,7 @@ def formataValoresNumero(df, nomeColuna):
     return df
 
 ## INFOS DAS AÇOES ##
-@app.get("/stocks/{symbol}/info")
+@app.get("/stocks/{symbol}/info", response_model=None)
 def get_info(symbol: str) -> dict:
     
     """
@@ -100,7 +126,7 @@ response = Response(media_type="application/json")
 
 ## HISTORICO DAS AÇOES ##
 
-@app.get("/stocks/{symbol}/history")
+@app.get("/stocks/{symbol}/history", response_model=None)
 def get_stock_history(symbol: str, period: str = '1y') -> pd.DataFrame:
     
     """
@@ -145,7 +171,7 @@ responseHistory = Response(media_type="application/json")
 
 ## TENDENCIA DE PREÇO ##
 
-@app.get("/stock/{symbol}/trend")
+@app.get("/stock/{symbol}/trend", response_model=None)
 def get_stock_trend(symbol: str) -> dict:
     
     """
@@ -185,7 +211,7 @@ responseHistory = Response(media_type="application/json")
 
 ## RSI ##
 
-@app.get("/stock/{symbol}/technical")
+@app.get("/stock/{symbol}/technical", response_model=None)
 def get_stock_technicals(symbol: str) -> dict:
     
     """
@@ -249,7 +275,7 @@ responseHistory = Response(media_type="application/json")
 
 ## VOLATILIDADE ##
 
-@app.get("stocks/{symbol}/volatility")
+@app.get("stocks/{symbol}/volatility", response_model=None)
 def get_volatility(symbol: str, start_date: str, end_date: str) -> str:
     
     """
@@ -280,7 +306,7 @@ responseHistory = Response(media_type="application/json")
 
 ## BETA ##
 
-@app.get("stocks/{symbol}/beta")
+@app.get("stocks/{symbol}/beta", response_model=None)
 def get_beta(symbol: str) -> dict:
     
     """
@@ -338,8 +364,8 @@ responseHistory = Response(media_type="application/json")
 
 ## VAR ##
     
-@app.get("stocks/{symbol}/VaR")
-def var(symbol: str, confidence_level: float, lookback_period: int) -> dict:
+@app.get("stocks/{symbol}/VaR", response_model=None)
+def get_var(symbol: str, confidence_level: float, lookback_period: int) -> dict:
     
     """
     ## Usabilidade 
@@ -379,12 +405,10 @@ if __name__ == '__main__':
 responseHistory = Response(media_type="application/json")
 
 
-
-
 ## CARTEIRA DE ATIVOS ##
 
 @app.get("stocks/{symbol}/AnnualReturn", response_model=None)
-def carteira_ativos(symbols: Union[str, list], start_date: str, end_date: str) -> pd.DataFrame:
+def asset_portfolio(symbols: Union[str, list], start_date: str, end_date: str) -> pd.DataFrame:
     """
     ## Usabilidade
     - Recebe uma lista e retorna um DataFrame com as informações dos ativos e algumas estatísticas básicas. \n
@@ -490,17 +514,19 @@ responseHistory = Response(media_type="application/json")
 ## ALOCAÇAO DE MARKOWITZ ##
 
 @app.get("stocks/{symbol}/MarkowitzAllocationn")
-def markowitz_allocation(symbols= list, star_date= str, end_date=str) -> str: 
+def markowitz_allocation(symbols= list, star_date= str, end_date=str) -> dict: 
     
     """
     ## Usabilidades 
     Alocação de Markowitz é uma técnica de otimização de portfólio que visa encontrar a combinação ideal de ativos para maximizar o retorno do investimento enquanto minimiza o risco. \n
-    
+
     ## O Retorno Esperado
     - representa a taxa de retorno média que se espera obter do portfólio de investimentos \n
     ## O Risco 
     - representa a medida de volatilidade do portfólio, ou seja, 
     quanto mais instável for o retorno dos ativos, maior será o risco do portfólio como um todo \n
+    
+    
     
     ## Parâmetros
     
@@ -509,7 +535,6 @@ def markowitz_allocation(symbols= list, star_date= str, end_date=str) -> str:
     - end_date -> Data Final para a busca das infos (preco, volume, etc) do ativo \n
 
     """
-    
     dados = yf.download(symbols, start=star_date, end=end_date)['Adj Close']
 
     # Calculando os retornos diários dos ativos
@@ -519,37 +544,39 @@ def markowitz_allocation(symbols= list, star_date= str, end_date=str) -> str:
     matriz_covariancia = retornos.cov()
 
     # Definindo o vetor de pesos de igual peso para todos os ativos
-    pesos = np.array([1/len(lista)] * len(lista))
+    pesos = np.array([1/len(symbols)] * len(symbols))
 
     # Calculando o retorno esperado e o risco da carteira com pesos iguais
     retorno_esperado = np.sum(retornos.mean() * pesos) * 252
+    
+    # adiciona uma pequena constante à diagonal da matriz de covariância, de forma que ela deixe de ser singular. 
     risco = np.sqrt(np.dot(pesos.T, np.dot(matriz_covariancia, pesos))) * np.sqrt(252)
-
-    # Imprimindo os resultados
-    # print("Retorno esperado: ", retorno_esperado)
-    # print("Risco: ", risco) 
     
     # Calculando a alocação de Markowitz
-    cov_inv = np.linalg.inv(matriz_covariancia)
-    vetor_uns = np.ones((len(lista),1))
+    lambda_ = 0.1 * np.trace(matriz_covariancia)  # Constante de regularização
+    cov_inv = np.linalg.inv(matriz_covariancia + lambda_ * np.eye(matriz_covariancia.shape[0]))    
+    vetor_uns = np.ones((len(symbols),1))
     w_markowitz = np.dot(cov_inv, vetor_uns) / np.dot(np.dot(vetor_uns.T, cov_inv), vetor_uns)
     w_markowitz = w_markowitz.flatten()
 
     # Imprimindo a alocação de Markowitz
     markowitzList = []
-    for i in range(len(lista)):
-        taxas = f"O ativo {lista[i]} deve ser alocado em {w_markowitz[i] * 100:.2f}% da carteira"
+    for i in range(len(symbols)):
+        taxas = f"O ativo {symbols[i]} deve ser alocado em {w_markowitz[i] * 100:.2f}% da carteira"
         markowitzList.append(taxas)
     json_data = {'Retorno Esperado' : retorno_esperado,
                  'Risco da Carteira' : risco,
                  'Alocacao Markowitz' : markowitzList}
     
-    formatted_json = json.dumps(json_data, indent=2)
+    formatted_json = json.dumps(json_data, indent=4, sort_keys=True)
     print(formatted_json)
+    
+    return formatted_json
     
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000, default="stocks/{symbol}/MarkowitzAllocation")
 responseHistory = Response(media_type="application/json")
+
 
 ## BUSCA INFO DE FUNDOS ##
 
@@ -564,8 +591,8 @@ def get_funds(symbol= str) -> pd.DataFrame:
         
     valuesFI = fundsDF.loc[(fundsDF['Código do fundo'] == symbol)]
     valuesFI = valuesFI[['Código do fundo', 'Setor', 'Preço Atual', 'Dividendo', 'Variação Preço', "Rentab. Período"]]
-    
-    return print(valuesFI)
+    print(valuesFI)
+    return valuesFI
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000, default="/infoFunds")
@@ -574,7 +601,7 @@ responseHistory = Response(media_type="application/json")
 
 ## COMPARADOR DE FUNDOS COM BASE NO SETOR ##
 
-@app.get("/compareSetorFunds")
+@app.get("/compareSetorFunds", response_model=None)
 def compare_setor_funds(setor= TipoSetores, rentabilidade_min = 0) -> pd.DataFrame:
     
     """
@@ -633,8 +660,8 @@ def compare_setor_funds(setor= TipoSetores, rentabilidade_min = 0) -> pd.DataFra
     })
     
     resultados = resultados.fillna('O setor/valor nao foi encontrado')
-    
-    return print(resultados)
+    print(resultados)
+    return resultados
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000, default="/compareSetorFunds")
@@ -643,7 +670,7 @@ responseHistory = Response(media_type="application/json")
 
 ## COMPARADOR DE FUNDOS ##
 
-@app.get("/compareFunds")
+@app.get("/compareFunds", response_model=None)
 def compare_funds(listfund= None, fund_1= str, fund_2= str) -> pd.DataFrame:
     """
     ## Usabilidade 
@@ -708,7 +735,151 @@ def compare_funds(listfund= None, fund_1= str, fund_2= str) -> pd.DataFrame:
         else:
             print(valuerisk)
             
+    return valuerisk, unit
+            
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000, default="/compareFunds")
 responseHistory = Response(media_type="application/json")
+
+
+## SIMULADOR DE AÇOES ##
+
+@app.get("/bestAssets", response_model=None)
+def best_assets(perfil= TipoPerfis) -> pd.DataFrame:
+    
+    """
+    ## Usabilidade
+    - Função que analisa os principais ativos listados no mercado que com base no perfil escolhido mostra quais podem ser suas escolhas e quantos porcento se deve ter na carteira
+    
+    ## Parâmetros
+    
+    - perfil -> Perfis que podem ser escolhidos para realizar a análise, segue a lista: \n
+    
+    ```
+    TipoPerfis:
+    * Agressivo
+    * Moderado
+    * Conservador
+    
+    ```
+    
+    ## Exemplo
+    
+    ```
+    
+    >>> alocation = best_assets(perfil='Agressivo')
+    
+    ```
+    
+    """
+    
+    # Lista de ativos
+    url = "https://www.dadosdemercado.com.br/bolsa/acoes"
+    response = requests.get(url)
+    if response.status_code != 200:
+        print('Acesso negado a base, tente novamente mais tarde.')
+    else:
+        soup = BeautifulSoup(response.content, "html.parser")
+        table = soup.find_all("table")[0]
+        fundsDF = pd.read_html(str(table), decimal=',', thousands='.')[0]    
+        fundsDF['Código'] = fundsDF['Código'].apply(lambda x: x+'.SA')
+        print('Buscando ativos....')
+        precos = yf.download(fundsDF['Código'].tolist(), period="1y")['Close']
+
+        # Função para calcular o retorno diário médio
+        def calcular_retorno(precos):
+            retorno = precos.pct_change()
+            retorno_medio = retorno.mean()
+            return retorno_medio
+
+        # Função para calcular a volatilidade diária
+        def calcular_risco(precos):
+            retorno = precos.pct_change()
+            risco = retorno.std()
+            return risco
+
+        # Calcular o retorno e o risco de cada ativo
+        retorno = {}
+        risco = {}
+        for ativo in precos.columns:
+            precos_ativo = precos[ativo]
+            retorno[ativo] = calcular_retorno(precos_ativo)
+            risco[ativo] = calcular_risco(precos_ativo)
+
+        # Análise para um cliente agressivo
+        if perfil == 'Agressivo':
+            agressivo = []
+            for ativo in precos.columns:
+                if retorno[ativo] > 0.0001 and risco[ativo] > 0.01:
+                    agressivo.append(ativo)
+            # print('Para um cliente agressivo, Ativos selecionados:', agressivo)
+            DfAgressivo = pd.DataFrame(agressivo, columns=['Ativos P/Agressivo'])
+            print('Realizando calculos para a sua carteira com base no seu perfil.')
+            alocation_Agressive = markowitz_allocation(agressivo, star_date= oneY, end_date= currently )
+            dataAlocation_Agressive = json.loads(alocation_Agressive)
+            dataAlocation_Agressive = pd.DataFrame(dataAlocation_Agressive)
+
+            # adiciona as quebras de linha na coluna "Alocacao Markowitz"
+            dataAlocation_Agressive['Alocacao Markowitz'] = dataAlocation_Agressive['Alocacao Markowitz'].replace('\n', '\\n', regex=True)
+            dataAlocation_Agressive['Retorno Esperado'] = dataAlocation_Agressive['Retorno Esperado'].drop_duplicates().dropna()
+            dataAlocation_Agressive['Risco da Carteira'] = dataAlocation_Agressive['Risco da Carteira'].drop_duplicates().dropna()
+            
+            if dataAlocation_Agressive.empty:
+                pass
+            else:
+                return dataAlocation_Agressive
+            
+        elif perfil == 'Moderado':
+            # Análise para um cliente moderado
+            moderado = []
+            for ativo in precos.columns:
+                if retorno[ativo] > 0.0003 and risco[ativo] < 0.03:
+                    moderado.append(ativo)
+            # print('Para um cliente moderado, Ativos selecionados:', moderado)
+            DfModerado = pd.DataFrame(moderado, columns=['Ativos P/Moderado'])
+            print('Realizando calculos para a sua carteira com base no seu perfil.')
+            alocation_Moderade = markowitz_allocation(moderado, star_date= oneY, end_date= currently )
+            dataAlocation_Moderade = json.loads(alocation_Moderade)
+            dataAlocation_Moderade = pd.DataFrame(dataAlocation_Moderade)
+
+            # adiciona as quebras de linha na coluna "Alocacao Markowitz"
+            dataAlocation_Moderade['Alocacao Markowitz'] = dataAlocation_Moderade['Alocacao Markowitz'].replace('\n', '\\n', regex=True)
+            dataAlocation_Moderade['Retorno Esperado'] = dataAlocation_Moderade['Retorno Esperado'].drop_duplicates().dropna()
+            dataAlocation_Moderade['Risco da Carteira'] = dataAlocation_Moderade['Risco da Carteira'].drop_duplicates().dropna()
+            
+            if dataAlocation_Moderade.empty:
+                pass
+            else:
+                return dataAlocation_Moderade
+            
+        elif perfil == 'Conservador':
+            # Análise para um cliente conservador
+            conservador = []
+            for ativo in precos.columns:
+                if risco[ativo] < 0.01:
+                    conservador.append(ativo)
+            DfConservador = pd.DataFrame(conservador, columns=['Ativos P/Conservador'])
+            # print('Para um cliente conservador, Ativos selecionados:', conservador)
+            print('Realizando calculos para a sua carteira com base no seu perfil.')
+            alocation_Conservative = markowitz_allocation(conservador, star_date= oneY, end_date= currently )
+            dataAlocation_Conservative = json.loads(alocation_Conservative)
+            dataAlocation_Conservative = pd.DataFrame(dataAlocation_Conservative)
+
+            # adiciona as quebras de linha na coluna "Alocacao Markowitz"
+            dataAlocation_Conservative['Alocacao Markowitz'] = dataAlocation_Conservative['Alocacao Markowitz'].replace('\n', '\\n', regex=True)
+            dataAlocation_Conservative['Retorno Esperado'] = dataAlocation_Conservative['Retorno Esperado'].drop_duplicates().dropna()
+            dataAlocation_Conservative['Risco da Carteira'] = dataAlocation_Conservative['Risco da Carteira'].drop_duplicates().dropna()
+            
+            if dataAlocation_Conservative.empty:
+                pass
+            else:
+                return dataAlocation_Conservative
+        else:
+            print('Perfil não reconhecido, os perfis disponiveis estao presentes na explicação da função')
+            
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000, default="/bestAssets")
+responseHistory = Response(media_type="application/json")
+
+
 
