@@ -1,0 +1,82 @@
+#mkdocs-search-results {
+    background-color: #333;
+    color: #fff;
+}
+
+#mkdocs-search-query {
+    background-color: #444;
+    color: #fff;
+    border: none;
+}
+
+body {
+    background-color: #222;
+    color: #fff;
+}
+
+.navbar {
+    background-color: #333;
+}
+
+.navbar .navbar-brand {
+    color: #fff;
+}
+
+.navbar .nav-link {
+    color: #fff;
+}
+
+.navbar .nav-item.active .nav-link {
+    color: #007bff;
+}
+
+a {
+    color: #007bff;
+}
+
+a:hover {
+    color: #0056b3;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    background-color: #0069d9;
+    border-color: #0062cc;
+}
+
+blockquote {
+    background-color: #333;
+    border-left: 0.25rem solid #007bff;
+    color: #fff;
+}
+
+pre {
+    background-color: #444;
+    color: #fff;
+}
+
+code {
+    color: #dcdcaa;
+}
+
+table {
+    background-color: #333;
+    color: #fff;
+}
+
+table td, table th {
+    border: none;
+    border-bottom: 1px solid #555;
+}
+
+table td:first-child, table th:first-child {
+    border-left: none;
+}
+
+table td:last-child, table th:last-child {
+    border-right: none;
+}

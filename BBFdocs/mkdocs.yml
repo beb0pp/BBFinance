@@ -1,0 +1,6 @@
+site_name: BBFinance
+
+theme:
+  name: 'cinder'
+# extra_css:
+#   - css/custom.css

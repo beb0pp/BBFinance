@@ -502,7 +502,7 @@ def markowitz_allocation(symbols: list, star_date: str, end_date: str) -> dict:
     
     """
     ## Usabilidades 
-    Alocação de Markowitz é uma técnica de otimização de portfólio que visa encontrar a combinação ideal de ativos para maximizar o retorno do investimento enquanto minimiza o risco. \n
+    - Alocação de Markowitz é uma técnica de otimização de portfólio que visa encontrar a combinação ideal de ativos para maximizar o retorno do investimento enquanto minimiza o risco. \n
 
     ## O Retorno Esperado
     - representa a taxa de retorno média que se espera obter do portfólio de investimentos \n
@@ -565,6 +565,17 @@ responseHistory = Response(media_type="application/json")
 
 @app.get("/infoFunds", response_model=None)
 def get_funds(symbol: str) -> pd.DataFrame:
+
+    """
+    ## Usabilidade
+    - Funçao utilizada para adquirir as principais caracteristicas e informações do fundo selecionado
+
+    ## Parâmetros
+
+    - symbol -> Nome do Fundo para fazer a busca \n
+
+    """
+
     url = "https://www.fundsexplorer.com.br/ranking"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -871,7 +882,7 @@ responseHistory = Response(media_type="application/json")
 
 
 @app.get("/bestAssetsValues", response_model=None)
-def best_assets_value(valor= 0) -> pd.DataFrame:
+def best_assets_value(valor= Union[int, float]) -> pd.DataFrame:
     
     """
     ## Usabilidade
