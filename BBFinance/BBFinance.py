@@ -9,7 +9,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-import chromedriver_autoinstaller
+# import chromedriver_autoinstaller
 import requests
 from bs4 import BeautifulSoup
 
@@ -71,6 +71,7 @@ class TipoPerfis(str, Enum):
     Moderado = 'Moderado'
     Conservador = 'Conservador'
 
+
 def formataValoresNumero(df, nomeColuna):
     df[nomeColuna] = df[nomeColuna].replace('[.]', '', regex=True)
     df[nomeColuna] = df[nomeColuna].replace('[%]', '', regex=True)
@@ -117,12 +118,14 @@ def get_info(symbol: str) -> dict:
                  'company_name': company_name,
                  'dividends' : dividend}
     
-    formatted_json = json.dumps(json_data, indent=5)
-    print(formatted_json)
+    # formatted_json = json.dumps(json_data, indent=4)
+
+    return json_data
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/info")
 response = Response(media_type="application/json")
+
 
 
 ## HISTORICO DAS AÇOES ##
@@ -156,8 +159,10 @@ def get_stock_history(symbol: str, period: str = '1y') -> pd.DataFrame:
         return {"error": print("No data found")}
     else:
         history_dict = history.to_dict(orient="list")
-        history_df = pd.DataFrame.from_dict(history_dict).reset_index(drop=False)     
-        return print(history_df)
+        history_df = pd.DataFrame.from_dict(history_dict).reset_index(drop=False)
+
+        return history_df
+    
         # json_data = {'symbol': symbol,
         # "history":  history_df.to_dict(orient="records"),
         # }
@@ -202,8 +207,9 @@ def get_stock_trend(symbol: str) -> dict:
                 "trend": trend,
     }
     
-    formatted_json = json.dumps(json_data, indent=2)
-    print(formatted_json)
+    # formatted_json = json.dumps(json_data, indent=2)
+
+    return json_data
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/trend")
@@ -266,13 +272,13 @@ def get_stock_technicals(symbol: str) -> dict:
         "tendency" : status
     }
 
-    formatted_json = json.dumps(json_data, indent=4)
-    print(formatted_json)
+    # formatted_json = json.dumps(json_data, indent=4)
+
+    return json_data
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/technical")
 responseHistory = Response(media_type="application/json")
-
 
 ## VOLATILIDADE ##
 
@@ -298,12 +304,12 @@ def get_volatility(symbol: str, start_date: str, end_date: str) -> str:
     
     log_returns = np.log(stock_data['Close']/stock_data['Close'].shift(1))
     volatility = np.sqrt(252*log_returns.var())
-    return {'volatility': print(volatility)}
+
+    return volatility
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/volatility")
 responseHistory = Response(media_type="application/json")
-
 
 ## BETA ##
 
@@ -322,12 +328,12 @@ def get_beta(symbol: str) -> dict:
     
     # Obter os dados do ativo e do mercado
     try:
-        asset = yf.Ticker(symbol)
+        asset = yf.Ticker('PETR4.SA')
         market = yf.Ticker("^BVSP") # Índice Bovespa como mercado de referência
         info = asset.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO, SENAO VAI PASSAR
         infoMarket = market.info
         tipoInfo = type(info)
-        if tipoInfo == dict | infoMarket == dict:
+        if tipoInfo == dict or infoMarket == dict:
             pass 
     except:
         return {"error": print("Invalid ticker symbol")}
@@ -355,8 +361,9 @@ def get_beta(symbol: str) -> dict:
     json_data =  {"beta": beta,
                   "status" : status}
     
-    formatted_json = json.dumps(json_data, indent=2)
-    print(formatted_json)
+    # formatted_json = json.dumps(json_data, indent=2)
+
+    return json_data
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/beta")
@@ -398,8 +405,9 @@ def get_var(symbol: str, confidence_level: float, lookback_period: int) -> dict:
     # Calcular o desvio padrão e o VaR histórico
     std_dev = returns.std()
     var = std_dev * norm.ppf(1 - confidence_level)
-
-    return print({"VaR": round(var * prices[-1], 2)})
+    print({"VaR": round(var * prices[-1], 2)})
+    Var = round(var * prices[-1], 2)
+    return Var
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/VaR")
@@ -461,8 +469,8 @@ def asset_portfolio(symbols: Union[str, list], start_date: str, end_date: str) -
                 'Retorno total': retorno_total
             }, index=[1])
             
-            print(valueSymbols)
-
+            return valueSymbols
+        
         except:
             print("Ticker inválido")
   
@@ -502,8 +510,8 @@ def asset_portfolio(symbols: Union[str, list], start_date: str, end_date: str) -
             }, index=[len(symbols)])
             
             valueDF = pd.concat([returnSymbols, valueDF])
-        print(valueDF)
 
+        return valueDF
     else:
         print("Tipo inválido. Digite uma string ou uma lista.")
 
@@ -569,10 +577,9 @@ def markowitz_allocation(symbols: list, star_date: str, end_date: str) -> dict:
                  'Risco da Carteira' : risco,
                  'Alocacao Markowitz' : markowitzList}
     
-    formatted_json = json.dumps(json_data, indent=4, sort_keys=True)
-    print(formatted_json)
+    # formatted_json = json.dumps(json_data, indent=4, sort_keys=True)
     
-    return formatted_json
+    return json_data
     
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000, default="stocks/{symbol}/MarkowitzAllocation")
@@ -592,7 +599,7 @@ def get_funds(symbol: str) -> pd.DataFrame:
         
     valuesFI = fundsDF.loc[(fundsDF['Código do fundo'] == symbol)]
     valuesFI = valuesFI[['Código do fundo', 'Setor', 'Preço Atual', 'Dividendo', 'Variação Preço', "Rentab. Período"]]
-    print(valuesFI)
+
     return valuesFI
 
 if __name__ == "__main__":
@@ -603,7 +610,7 @@ responseHistory = Response(media_type="application/json")
 ## COMPARADOR DE FUNDOS COM BASE NO SETOR ##
 
 @app.get("/compareSetorFunds", response_model=None)
-def compare_setor_funds(setor= TipoSetores, rentabilidade_min = 0) -> pd.DataFrame:
+def compare_setor_funds(setor: str, rentabilidade_min = 0) -> pd.DataFrame:
     
     """
     ## Usabilidade
@@ -620,22 +627,20 @@ def compare_setor_funds(setor= TipoSetores, rentabilidade_min = 0) -> pd.DataFra
     - Corporativas = "Lajes Corporativas" 
     - Mobiliarios = "Títulos e Val. Mob."
     - Shoppings = "Shoppings"
-    - Hibridos = 'Híbrido'
+    - Híbrido = 'Híbrido'
     - Renda = 'Renda'
-    - Logistica = 'Logística'
+    - Logística = 'Logística'
     - Hospital = 'Hospital'
     - Residencial = 'Residencial'
     - Outros = 'Outros'
 
     ```
-    
     ## Exemplo:
     
     ```
     >>> bb.compare_setor_funds(setor='Corporativas', rentabilidade_min = 3)
     ```
-    
-    
+
     """
     
     url = "https://www.fundsexplorer.com.br/ranking"
@@ -650,8 +655,15 @@ def compare_setor_funds(setor= TipoSetores, rentabilidade_min = 0) -> pd.DataFra
     valuesFI = valuesFI[['Código do fundo', 'Setor', 'Preço Atual', 'Dividendo', 'Variação Preço', "Rentab. Período"]]
     valuesFI = valuesFI.dropna()
     rentabilidade_media = valuesFI['Rentab. Período'].mean()
-    rentabilidade_mercado = valuesFI.loc[valuesFI["Setor"] == setor]["Rentab. Período"].mean()
-    
+    if setor == 'Corporativas':
+        setor = 'Lajes Corporativas'
+        rentabilidade_mercado = valuesFI.loc[valuesFI["Setor"] == setor]["Rentab. Período"].mean()
+    elif setor == 'Mobiliarios': 
+        setor = 'Títulos e Val. Mob.'
+        rentabilidade_mercado = valuesFI.loc[valuesFI["Setor"] == setor]["Rentab. Período"].mean()
+    else:
+        rentabilidade_mercado = valuesFI.loc[valuesFI["Setor"] == setor]["Rentab. Período"].mean()
+
     desvio_padrao = valuesFI["Rentab. Período"].std()
     
     resultados = pd.DataFrame({
@@ -661,7 +673,7 @@ def compare_setor_funds(setor= TipoSetores, rentabilidade_min = 0) -> pd.DataFra
     })
     
     resultados = resultados.fillna('O setor/valor nao foi encontrado')
-    print(resultados)
+
     return resultados
 
 if __name__ == "__main__":
@@ -674,7 +686,7 @@ responseHistory = Response(media_type="application/json")
 @app.get("/compareFunds", response_model=None)
 def compare_funds(listfund= None, fund_1= str, fund_2= str) -> pd.DataFrame:
     """
-    ## Usabilidade 
+    ## Usabilidade
     
     - Funçao que realiza a comparaçao entre dois fundos, seja feita a requisiçao dos fundos via lista ou unicos 
     - Requisiçao Listas: Retorna o fundo com maior porcentagem de risco (a variação percentual dos preços dos ativos, calculo realizado com base no desvio padrão)
@@ -713,7 +725,7 @@ def compare_funds(listfund= None, fund_1= str, fund_2= str) -> pd.DataFrame:
         if unit.empty:
             print('Nao foram apresentado dados dos fundos para verificaçao unica')
         else:
-            print(unit)
+            return unit
         
     if listfund is None:
         listfund = []
@@ -734,10 +746,8 @@ def compare_funds(listfund= None, fund_1= str, fund_2= str) -> pd.DataFrame:
         if valuerisk.empty:
             print('Nao foram apresentado dados dos fundos para verificaçao múltipla')
         else:
-            print(valuerisk)
-            
-    return valuerisk, unit
-            
+            return valuerisk
+                        
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000, default="/compareFunds")
 responseHistory = Response(media_type="application/json")
@@ -746,7 +756,7 @@ responseHistory = Response(media_type="application/json")
 ## SIMULADOR DE AÇOES ##
 
 @app.get("/bestAssets", response_model=None)
-def best_assets(perfil= TipoPerfis) -> pd.DataFrame:
+def best_assets(perfil= str) -> pd.DataFrame:
     
     """
     ## Usabilidade
@@ -817,11 +827,12 @@ def best_assets(perfil= TipoPerfis) -> pd.DataFrame:
             DfAgressivo = pd.DataFrame(agressivo, columns=['Ativos P/Agressivo'])
             print('Realizando calculos para a sua carteira com base no seu perfil.')
             alocation_Agressive = markowitz_allocation(agressivo, star_date= oneY, end_date= currently )
-            dataAlocation_Agressive = json.loads(alocation_Agressive)
-            dataAlocation_Agressive = pd.DataFrame(dataAlocation_Agressive)
+            alocation_Agressive = [alocation_Agressive]
+            dataAlocation_Agressive = pd.DataFrame(alocation_Agressive)
+            dataAlocation_Agressive = dataAlocation_Agressive.explode('Alocacao Markowitz')
 
             # adiciona as quebras de linha na coluna "Alocacao Markowitz"
-            dataAlocation_Agressive['Alocacao Markowitz'] = dataAlocation_Agressive['Alocacao Markowitz'].replace('\n', '\\n', regex=True)
+            # dataAlocation_Agressive['Alocacao Markowitz'] = dataAlocation_Agressive['Alocacao Markowitz'].replace('\n', '\\n', regex=True)
             dataAlocation_Agressive['Retorno Esperado'] = dataAlocation_Agressive['Retorno Esperado'].drop_duplicates().dropna()
             dataAlocation_Agressive['Risco da Carteira'] = dataAlocation_Agressive['Risco da Carteira'].drop_duplicates().dropna()
             
@@ -840,11 +851,12 @@ def best_assets(perfil= TipoPerfis) -> pd.DataFrame:
             DfModerado = pd.DataFrame(moderado, columns=['Ativos P/Moderado'])
             print('Realizando calculos para a sua carteira com base no seu perfil.')
             alocation_Moderade = markowitz_allocation(moderado, star_date= oneY, end_date= currently )
-            dataAlocation_Moderade = json.loads(alocation_Moderade)
-            dataAlocation_Moderade = pd.DataFrame(dataAlocation_Moderade)
+            alocation_Moderade = [alocation_Moderade]
+            dataAlocation_Moderade = pd.DataFrame(alocation_Moderade)
+            dataAlocation_Moderade = dataAlocation_Moderade.explode('Alocacao Markowitz')
 
             # adiciona as quebras de linha na coluna "Alocacao Markowitz"
-            dataAlocation_Moderade['Alocacao Markowitz'] = dataAlocation_Moderade['Alocacao Markowitz'].replace('\n', '\\n', regex=True)
+            # dataAlocation_Moderade['Alocacao Markowitz'] = dataAlocation_Moderade['Alocacao Markowitz'].replace('\n', '\\n', regex=True)
             dataAlocation_Moderade['Retorno Esperado'] = dataAlocation_Moderade['Retorno Esperado'].drop_duplicates().dropna()
             dataAlocation_Moderade['Risco da Carteira'] = dataAlocation_Moderade['Risco da Carteira'].drop_duplicates().dropna()
             
@@ -863,11 +875,11 @@ def best_assets(perfil= TipoPerfis) -> pd.DataFrame:
             # print('Para um cliente conservador, Ativos selecionados:', conservador)
             print('Realizando calculos para a sua carteira com base no seu perfil.')
             alocation_Conservative = markowitz_allocation(conservador, star_date= oneY, end_date= currently )
-            dataAlocation_Conservative = json.loads(alocation_Conservative)
-            dataAlocation_Conservative = pd.DataFrame(dataAlocation_Conservative)
-
+            alocation_Conservative = [alocation_Conservative]
+            dataAlocation_Conservative = pd.DataFrame(alocation_Conservative)
+            dataAlocation_Conservative = dataAlocation_Conservative.explode('Alocacao Markowitz')
             # adiciona as quebras de linha na coluna "Alocacao Markowitz"
-            dataAlocation_Conservative['Alocacao Markowitz'] = dataAlocation_Conservative['Alocacao Markowitz'].replace('\n', '\\n', regex=True)
+            # dataAlocation_Conservative['Alocacao Markowitz'] = dataAlocation_Conservative['Alocacao Markowitz'].replace('\n', '\\n', regex=True)
             dataAlocation_Conservative['Retorno Esperado'] = dataAlocation_Conservative['Retorno Esperado'].drop_duplicates().dropna()
             dataAlocation_Conservative['Risco da Carteira'] = dataAlocation_Conservative['Risco da Carteira'].drop_duplicates().dropna()
             
@@ -897,7 +909,7 @@ def best_assets_value(valor= 0) -> pd.DataFrame:
     """
     
     # Lista de ativos
-    ativos = pd.read_excel(r'C:\Users\Luis\ProjetoFin\BBFinance\Data\AtivosIbov.xlsx')
+    ativos = pd.read_excel(r'Q:\Risco\Novo Risco\pythonrisco\BBFinance\Data\AtivosIbov.xlsx')
     ativos['Código'] = ativos['Código'].apply(lambda x: x+'.SA')
 
     # Baixa os dados históricos dos ativos nos últimos 12 meses

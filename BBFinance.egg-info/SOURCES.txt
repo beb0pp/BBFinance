@@ -1,6 +1,8 @@
 LICENSE.txt
 README.md
+requirements.txt
 setup.py
+teste.py
 BBFinance/BBFinance.py
 BBFinance/__init__.py
 BBFinance.egg-info/PKG-INFO
@@ -8,3 +10,10 @@ BBFinance.egg-info/SOURCES.txt
 BBFinance.egg-info/dependency_links.txt
 BBFinance.egg-info/requires.txt
 BBFinance.egg-info/top_level.txt
+BBFinance/__pycache__/BBFinance.cpython-311.pyc
+BBFinance/__pycache__/BBFinance.cpython-39.pyc
+BBFinance/__pycache__/__init__.cpython-311.pyc
+BBFinance/__pycache__/__init__.cpython-39.pyc
+Data/AtivosIbov.xlsx
+__pycache__/__init__.cpython-39.pyc
+__pycache__/main.cpython-39.pyc
