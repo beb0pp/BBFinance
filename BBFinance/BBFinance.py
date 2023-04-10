@@ -20,14 +20,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import json
 import uvicorn
-
+import BBFinance as bb
 #BIBLIOTECAS DE ANALISE DE DATAFRAMES, DADOS E CRIAÇAO DE CLASSES
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from enum import Enum
-from pydantic import BaseModel
-from typing import List, Union, Optional
+from typing import Union
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -44,7 +42,7 @@ oneY = one_year_ago.strftime('%Y-%m-%d')
 currently = today.strftime('%Y-%m-%d')
 
 app = FastAPI()
-templates = Jinja2Templates(directory="Site")
+# templates = Jinja2Templates(directory="Site")
 # app.mount("/Static", StaticFiles(directory="Static"), name="Static")
 
 # @app.get("/", response_class=HTMLResponse)
@@ -53,23 +51,6 @@ templates = Jinja2Templates(directory="Site")
 # if __name__ == "__main__":
 #     import uvicorn
 #     uvicorn.run(app, host="127.0.0.1", port=8000)
-
-
-class TipoSetores(str, Enum):
-    Corporativas = "Lajes Corporativas"
-    Mobiliarios = "Títulos e Val. Mob."
-    Shoppings = "Shoppings"
-    Hibridos = 'Híbrido'
-    Renda = 'Renda'
-    Logistica = 'Logística'
-    Hospital = 'Hospital'
-    Residencial = 'Residencial'
-    Outros = 'Outros'
-
-class TipoPerfis(str, Enum):
-    Agressivo = 'Agressivo'
-    Moderado = 'Moderado'
-    Conservador = 'Conservador'
 
 
 def formataValoresNumero(df, nomeColuna):
@@ -93,15 +74,13 @@ def get_info(symbol: str) -> dict:
     
     """
     
-    try:
-        stock = yf.Ticker(symbol)
-        info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO
-        tipoInfo = type(info)
-        if tipoInfo == dict:
-            pass #SE FOR VAI SO PASSAR 
-    except:
-        return {"error": print("Invalid ticker symbol")}
-    
+    stock = yf.Ticker(symbol)
+    info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO
+    tipoInfo = type(info)
+    if tipoInfo == dict:
+        pass #SE FOR VAI SO PASSAR 
+    else:
+        print('Ticker Invalido')
     # Obtenha o valor a mercado da açao
     current_price = stock.info['regularMarketPrice']
 
@@ -127,7 +106,6 @@ if __name__ == '__main__':
 response = Response(media_type="application/json")
 
 
-
 ## HISTORICO DAS AÇOES ##
 
 @app.get("/stocks/{symbol}/history", response_model=None)
@@ -144,15 +122,14 @@ def get_stock_history(symbol: str, period: str = '1y') -> pd.DataFrame:
     
     """
     
-    try:
-        stock = yf.Ticker(symbol)
-        info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO
-        tipoInfo = type(info)
-        if tipoInfo == dict:
-            pass #SE FOR VAI SO PASSAR 
-    except:
-        return {"error": print("Invalid ticker symbol")}
-    
+    stock = yf.Ticker(symbol)
+    info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO
+    tipoInfo = type(info)
+    if tipoInfo == dict:
+        pass #SE FOR VAI SO PASSAR 
+    else:
+        print('Ticker Invalido')
+
     history = stock.history(period=period)
     
     if history.empty:
@@ -190,14 +167,13 @@ def get_stock_trend(symbol: str) -> dict:
     
     """
     
-    try:
-        stock = yf.Ticker(symbol)
-        info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO
-        tipoInfo = type(info)
-        if tipoInfo == dict:
-            pass #SE FOR VAI SO PASSAR 
-    except:
-        return {"error": print("Invalid ticker symbol")}
+    stock = yf.Ticker(symbol)
+    info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO
+    tipoInfo = type(info)
+    if tipoInfo == dict:
+        pass #SE FOR VAI SO PASSAR 
+    else:
+        print('Ticker Invalido')
 
     history = stock.history(period='1d')
     close_prices = history['Close']
@@ -234,14 +210,13 @@ def get_stock_technicals(symbol: str) -> dict:
     
     """
     
-    try:
-        stock = yf.Ticker(symbol)
-        info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO, SENAO VAI PASSAR
-        tipoInfo = type(info)
-        if tipoInfo == dict:
-            pass 
-    except:
-        return {"error": print("Invalid ticker symbol")}
+    stock = yf.Ticker(symbol)
+    info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO, SENAO VAI PASSAR
+    tipoInfo = type(info)
+    if tipoInfo == dict:
+        pass 
+    else:
+        print('Ticker Invalido')
 
     history = stock.history(period='max')
     close_prices = history['Close']
@@ -280,6 +255,7 @@ if __name__ == '__main__':
     uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/technical")
 responseHistory = Response(media_type="application/json")
 
+
 ## VOLATILIDADE ##
 
 @app.get("stocks/{symbol}/volatility", response_model=None)
@@ -311,6 +287,7 @@ if __name__ == '__main__':
     uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/volatility")
 responseHistory = Response(media_type="application/json")
 
+
 ## BETA ##
 
 @app.get("stocks/{symbol}/beta", response_model=None)
@@ -327,16 +304,15 @@ def get_beta(symbol: str) -> dict:
     """
     
     # Obter os dados do ativo e do mercado
-    try:
-        asset = yf.Ticker('PETR4.SA')
-        market = yf.Ticker("^BVSP") # Índice Bovespa como mercado de referência
-        info = asset.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO, SENAO VAI PASSAR
-        infoMarket = market.info
-        tipoInfo = type(info)
-        if tipoInfo == dict or infoMarket == dict:
-            pass 
-    except:
-        return {"error": print("Invalid ticker symbol")}
+    asset = yf.Ticker('PETR4.SA')
+    market = yf.Ticker("^BVSP") # Índice Bovespa como mercado de referência
+    info = asset.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO, SENAO VAI PASSAR
+    infoMarket = market.info
+    tipoInfo = type(info)
+    if tipoInfo == dict or infoMarket == dict:
+        pass 
+    else:
+        print('Ticker Invalido')
 
     asset_history = asset.history(period="max")
     market_history = market.history(period="max")
@@ -387,14 +363,13 @@ def get_var(symbol: str, confidence_level: float, lookback_period: int) -> dict:
 
     """
     
-    try:
-        stock = yf.Ticker(symbol)
-        info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO, SENAO VAI PASSAR
-        tipoInfo = type(info)
-        if tipoInfo == dict:
-            pass
-    except:
-         print("Invalid ticker symbol")
+    stock = yf.Ticker(symbol)
+    info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO, SENAO VAI PASSAR
+    tipoInfo = type(info)
+    if tipoInfo == dict:
+        pass
+    else:
+        print('Ticker Invalido')
 
     # Obter os dados de preços do ativo
     prices = stock.history(period=f"{lookback_period}d")["Close"]
