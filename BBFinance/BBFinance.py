@@ -514,7 +514,7 @@ responseHistory = Response(media_type="application/json")
 ## ALOCAÇAO DE MARKOWITZ ##
 
 @app.get("stocks/{symbol}/MarkowitzAllocationn")
-def markowitz_allocation(symbols= list, star_date= str, end_date=str) -> dict: 
+def markowitz_allocation(symbols: list, star_date: str, end_date: str) -> dict: 
     
     """
     ## Usabilidades 
@@ -581,7 +581,7 @@ responseHistory = Response(media_type="application/json")
 ## BUSCA INFO DE FUNDOS ##
 
 @app.get("/infoFunds", response_model=None)
-def get_funds(symbol= str) -> pd.DataFrame:
+def get_funds(symbol: str) -> pd.DataFrame:
     url = "https://www.fundsexplorer.com.br/ranking"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -882,4 +882,109 @@ if __name__ == "__main__":
 responseHistory = Response(media_type="application/json")
 
 
+@app.get("/bestAssetsValues", response_model=None)
+def best_assets_value(valor= 0) -> pd.DataFrame:
+    # Lista de ativos
+    ativos = pd.read_excel(r'C:\Users\Luis\ProjetoFin\BBFinance\Data\AtivosIbov.xlsx')
+    ativos['Código'] = ativos['Código'].apply(lambda x: x+'.SA')
 
+    # Baixa os dados históricos dos ativos nos últimos 12 meses
+    precos = yf.download(ativos['Código'].tolist(), period='1y')['Close']
+
+    # Remove colunas com valores ausentes
+    precos = precos.dropna(axis=1)
+
+    # Calcula o retorno esperado e o risco dos ativos
+    retorno_esperado = precos.pct_change().mean() * 252
+    risco = precos.pct_change().std() * np.sqrt(252)
+
+    # Cria um dataframe com os dados dos ativos
+    ativos_df = pd.DataFrame({'retorno_esperado': retorno_esperado, 'risco': risco})
+
+    # Adiciona uma coluna com o índice de Sharpe de cada ativo
+    ativos_df['sharpe'] = ativos_df['retorno_esperado'] / ativos_df['risco']
+
+    # Ordena os ativos por índice de Sharpe e seleciona os 5 melhores
+    ativos_df = ativos_df.sort_values('sharpe', ascending=False).head(6)
+
+    # Calcula a alocação de cada ativo na carteira
+    ativos_df['alocacao'] = ativos_df['sharpe'] / ativos_df['sharpe'].sum()
+
+    # Calcula o valor alocado em cada ativo com base no valor sugerido
+    ativos_df['valor'] = ativos_df['alocacao'] * valor
+    ativos_df = ativos_df.reset_index()
+    
+    ativos_df = ativos_df.rename(columns={'index' : 'Ativos', 'valor' : 'Qtd Necessaria (R$)'})
+    
+    for ativo in ativos_df['Ativos']:
+        data = yf.download(ativo, period="1y")
+        retorno_esperado[ativo] = (data['Close'].iloc[-1] - data['Close'].iloc[0]) / data['Close'].iloc[0]
+
+    # calcular o retorno para cada ativo baseado no valor investido
+    retorno_por_ativo = {ativo: retorno_esperado[ativo] * valor for ativo in ativos_df['Ativos'] }
+    ListaRetorno = retorno_por_ativo.values()
+    ListaRetorno = list(ListaRetorno)
+    
+    ativos_df['Retorno Aprox.'] = ListaRetorno
+    
+    # Retorna o dataframe com os ativos selecionados e seus valores alocados
+    return ativos_df[['Ativos', 'Qtd Necessaria (R$)', 'Retorno Aprox.']]
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000, default="/bestAssetsValues")
+responseHistory = Response(media_type="application/json")
+
+
+from sklearn.linear_model import LinearRegression
+
+def prever_taxa_retorno(ativo):
+    
+    dados_historicos = yf.download('PETR4.SA', period='1y')
+    dados_historicos = dados_historicos.reset_index()
+
+    # Seleciona os dados históricos do ativo
+    # dados_ativo = dados_historicos.loc[dados_historicos['Ativo'] == ativo]
+
+    # Separa as variáveis independentes (datas) e dependentes (preços)
+    datas = pd.to_numeric(dados_historicos['Date'].astype(str).str.replace('-', ''))
+    precos = dados_historicos['Close']
+
+    # Cria o modelo de regressão linear
+    modelo = LinearRegression()
+
+    # Treina o modelo com os dados históricos
+    modelo.fit(datas.values.reshape(-1, 1), precos)
+
+    # Faz a previsão da taxa de retorno para o próximo período
+    data_atual = pd.Timestamp.today().strftime('%Y-%m-%d')
+    data_futura = (pd.Timestamp.today() + pd.DateOffset(days=365)).strftime('%Y-%m-%d')
+    taxa_retorno = (modelo.predict(pd.to_numeric([data_futura.replace('-', '')]).reshape(-1, 1)) / 
+                    modelo.predict(pd.to_numeric([data_atual.replace('-', '')]).reshape(-1, 1)) - 1)
+
+    return taxa_retorno[0] * -1
+
+
+# QUANTO MAIOR A TAXA DE RETORNO EM MENOS TEMPO VAI TER O RETORNO EM DIVIDENDO, A QUESTAO É PEGAR UMA TAXA DE RETORNO JUSTA OU UMA PADRAO
+
+def retornos_dividendos(ativos: Union[str, list], investimento: Union[int, float], taxa_desconto= 0.23):
+    data = pd.DataFrame(columns=['Ativo', 'Retorno com Dividendos', 'Tempo para Atingir Retorno'])
+    
+    if isinstance(ativos, str):
+        ticker = yf.Ticker(ativos)
+        preco = ticker.history(period="1y")['Close'][0]
+        dividendos = ticker.dividends.sum()
+        retorno = ((preco + dividendos) / preco - 1) * investimento
+        tempo = np.log(retorno / investimento + 1) / np.log(1 + 0.01 * taxa_desconto) / 12  # tempo em meses
+        data = data.append({'Ativo': ativos, 'Retorno com Dividendos': retorno, 'Tempo para Atingir Retorno': tempo}, ignore_index=True)
+    else:    
+        for ativo in ativos:
+            ticker = yf.Ticker(ativo)
+            preco = ticker.history(period="1y")['Close'][0]
+            dividendos = ticker.dividends.sum()
+            retorno = ((preco + dividendos) / preco - 1) * investimento
+            tempo = np.log(retorno / investimento + 1) / np.log(1 + 0.01 * taxa_desconto) / 12  # tempo em meses
+            data = data.append({'Ativo': ativo, 'Retorno com Dividendos': retorno, 'Tempo para Atingir Retorno': tempo}, ignore_index=True)
+
+    return data
+
+retornos_dividendos('PETR4.SA', investimento=100.00)
