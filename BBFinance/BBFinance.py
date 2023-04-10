@@ -2,6 +2,7 @@
 import yfinance as yf
 from scipy.stats import norm
 from scipy.optimize import minimize
+from sklearn.linear_model import LinearRegression
 
 #BIBLIOTECAS PARA WEBSCRAPING
 from selenium import webdriver
@@ -884,6 +885,17 @@ responseHistory = Response(media_type="application/json")
 
 @app.get("/bestAssetsValues", response_model=None)
 def best_assets_value(valor= 0) -> pd.DataFrame:
+    
+    """
+    ## Usabilidade
+    - Função que analisa os ativos do IBOVESPA que com base no valor de investimento escolhido mostra quais podem ser suas escolhas, o quanto ira ter que investir para cada ativo e o retorno aproximado para cada um deles \n
+    - Usamos como metodo de cálculo o a medida Sharpe que nada mais é que uma  medida de desempenho de investimentos que leva em consideração o retorno obtido pelo investimento em relação ao risco assumido
+    ## Parâmetros
+    
+    - valor -> Valor do investimento, por padrão 0
+
+    """
+    
     # Lista de ativos
     ativos = pd.read_excel(r'C:\Users\Luis\ProjetoFin\BBFinance\Data\AtivosIbov.xlsx')
     ativos['Código'] = ativos['Código'].apply(lambda x: x+'.SA')
@@ -935,7 +947,7 @@ if __name__ == "__main__":
 responseHistory = Response(media_type="application/json")
 
 
-from sklearn.linear_model import LinearRegression
+#################################################################
 
 def prever_taxa_retorno(ativo):
     
@@ -986,5 +998,3 @@ def retornos_dividendos(ativos: Union[str, list], investimento: Union[int, float
             data = data.append({'Ativo': ativo, 'Retorno com Dividendos': retorno, 'Tempo para Atingir Retorno': tempo}, ignore_index=True)
 
     return data
-
-retornos_dividendos('PETR4.SA', investimento=100.00)
