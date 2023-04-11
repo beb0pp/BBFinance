@@ -23,7 +23,7 @@ Para instalar a biblioteca, use o seguinte comando:
 
 * `bb.get_info()` - Busca as principais informações dos ativos
 * `get_stock_history() `- Busca o histórico de preços do ativo inserido
-* `get-stock_trend()` - Identifica a tendencia de preço de uma açao, se ira ser de ALTA ou BAIXA
+* `get_stock_trend()` - Identifica a tendencia de preço de uma açao, se ira ser de ALTA ou BAIXA
 * `get_stock_technicals()` - Cálculo envolve a comparação da média de ganhos e perdas de um periodo.
 * `get_volatility()` - Método usado para verificar a volatilidade de um ativo em comparacao ao mercado.
 * `get_beta()` - O valor do beta é utilizado para medir o risco de uma ação em relação ao mercado em que ela é negociada

@@ -204,7 +204,9 @@ def get_stock_technicals(symbol: str) -> dict:
     ## Como interpretar 
     - Quando o RSI está acima de 70, o ativo é considerado sobrecomprado, o que significa que pode estar prestes a sofrer uma correção para baixo. 
     Quando o RSI está abaixo de 30, o ativo é considerado sobrevendido, o que significa que pode estar prestes a subir novamente. \n 
-    
+    - sma_50 -> Media movel dos 50 periodos
+    - sma_200 -> media movel dos 200 peridos
+
     ## Parâmetros
     - symbol -> Nome do Ativo para a busca \n
     
