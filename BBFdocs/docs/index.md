@@ -4,7 +4,7 @@ A BBFinance é uma biblioteca com o objetivo de apresentar informações de aç�
 
 Para instalar a biblioteca utilize o comando `pip install BBFinance`.
 
-Para maiores informações acesse a pagina do Pypi. [Instalação](https://pypi.org/project/BBFinance/)
+Para maiores informações acesse a pagina do Pypi. [Instalação](https://github.com/beb0pp/BBFinance)
 
 A BBFinance possui diversos recursos, como:
 
