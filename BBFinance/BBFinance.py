@@ -3,16 +3,18 @@ import yfinance as yf
 from scipy.stats import norm
 from scipy.optimize import minimize
 from sklearn.linear_model import LinearRegression
+from py_vollib.black_scholes.greeks.analytical import delta, gamma, vega, theta
+from py_vollib.black_scholes import black_scholes
 
 #BIBLIOTECAS PARA WEBSCRAPING
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-# import chromedriver_autoinstaller
+import chromedriver_autoinstaller
 import requests
 from bs4 import BeautifulSoup
-
+import time
 #BIBLIOTECAS DE CHAMADAS DE API
 from fastapi import FastAPI, Response, Request
 from fastapi.responses import HTMLResponse
@@ -20,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import json
 import uvicorn
-import BBFinance as bb
+
 #BIBLIOTECAS DE ANALISE DE DATAFRAMES, DADOS E CRIAÇAO DE CLASSES
 import pandas as pd
 import numpy as np
@@ -36,9 +38,14 @@ yf.pdr_override()
 today = datetime.today()
 # Data de um ano atrás
 one_year_ago = today - timedelta(days=365)
+one_days_ago = today - timedelta(days=1)
+seven_days_ago = today - timedelta(days=7)
 
 # Convertendo as datas para strings com formato yyyy-mm-dd
 oneY = one_year_ago.strftime('%Y-%m-%d')
+oneD = one_days_ago.strftime('%Y-%m-%d')
+sevenD = seven_days_ago.strftime('%Y-%m-%d')
+
 currently = today.strftime('%Y-%m-%d')
 
 app = FastAPI()
@@ -306,7 +313,7 @@ def get_beta(symbol: str) -> dict:
     """
     
     # Obter os dados do ativo e do mercado
-    asset = yf.Ticker('PETR4.SA')
+    asset = yf.Ticker(symbol)
     market = yf.Ticker("^BVSP") # Índice Bovespa como mercado de referência
     info = asset.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO, SENAO VAI PASSAR
     infoMarket = market.info
@@ -945,6 +952,90 @@ def best_assets_value(valor= Union[int, float]) -> pd.DataFrame:
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000, default="/bestAssetsValues")
 responseHistory = Response(media_type="application/json")
+
+
+@app.get("/options/{symbol}/info", response_model=None)
+def get_opc(symbol: str, call: True | False, put: True | False) -> pd.DataFrame():
+    if symbol.endswith('.SA'):
+        symbol = symbol.replace('.SA', '')
+    else:
+        print('Procurando dados de opções do ativo selecionado...')
+        pass
+    chromedriver_autoinstaller.install()
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')
+    driver = webdriver.Chrome(options=chrome_options)
+
+    url = f'https://opcoes.net.br/opcoes/bovespa/{symbol}'
+    driver.get(url)
+    time.sleep(1.5)
+    table = driver.find_element(By.CSS_SELECTOR, '#tblListaOpc')
+    table_html = table.get_attribute('outerHTML')
+    dfOPC = pd.read_html(str(table_html), decimal=',', thousands='.')
+    dfOPC = dfOPC[0]
+    dfOPC = dfOPC[['Ticker', 'Tipo', 'Strike', 'A/I/OTM', 'Dist. (%) do Strike', 'Último', 'Var. (%)', 'Núm. de Neg.', 'Vol. Financeiro', 'Delta', 'Gamma', 'Theta ($)', 'Vega']]
+    if call == True:
+        dfCall = dfOPC.loc[dfOPC['Tipo'] == 'CALL']
+        return dfCall
+    elif put == True:
+        dfPut = dfOPC.loc[dfOPC['Tipo'] == 'PUT']
+        return dfPut
+    else:
+        return dfOPC
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000, default="/options/{symbol}/info")
+responseHistory = Response(media_type="application/json")
+
+
+
+
+def calc_opc(Call_or_Put = Union['call', 'put'], ativo= str, preco = float, strike= float, diasUteis= int) -> str:
+    
+    volatilidadeD = get_volatility(ativo, sevenD, currently)
+    volatilidade = volatilidadeD * 252**2
+    taxaLR= 5.4563
+    
+    d1 = (np.log(preco/strike) + (taxaLR + (volatilidade**2/2)*diasUteis) * (volatilidade * np.sqrt(diasUteis)))
+    d2 = d1 = (volatilidade * np.sqrt(diasUteis))
+
+    if Call_or_Put == 'call':
+        C = preco * norm.cdf(d1) - strike * np.exp(-taxaLR*diasUteis) * norm.cdf(d2)
+        return C
+    elif Call_or_Put == 'put':
+        P = strike * np.exp(-taxaLR*diasUteis) * norm.cdf(d2) - preco * norm.cdf(-d1)
+        return P
+    else:
+        print('As opções validas sao somente as de CALL e PUT')
+
+def gregas(Call_or_Put = Union['call', 'put'], ativo= str, preco = float, strike= float, diasUteis= int):
+    if Call_or_Put == 'call':
+        Call_or_Put = 'c'
+    elif Call_or_Put == 'put':
+        Call_or_Put = 'p'
+    else:
+        print('O parametros recebe apenas')
+    volatilidadeD = get_volatility(ativo, sevenD, currently)
+    volatilidade = volatilidadeD * 252**2
+    taxaLR= 5.4563
+
+    d1 = (np.log(preco/strike) + (taxaLR + (volatilidade**2/2)*diasUteis) * (volatilidade * np.sqrt(diasUteis)))
+    d2 = d1 = (volatilidade * np.sqrt(diasUteis))
+    deltas = delta('c', preco, strike, diasUteis, taxaLR, volatilidade)
+    gammas = gamma('c', preco, strike, diasUteis, taxaLR, volatilidade)
+    vegas = vega('c', preco, strike, diasUteis, taxaLR, volatilidade)
+    thetas = theta('c', preco, strike, diasUteis, taxaLR, volatilidade)
+
+    print('Delta:', deltas)
+    print('Gamma:', gammas)
+    print('Vega:', vegas)
+    print('Theta:', thetas)
+
+
+gregas()
+
+
+
 
 
 #################################################################
