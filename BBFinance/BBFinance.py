@@ -967,21 +967,29 @@ def get_opc(symbol: str, call: True | False, put: True | False) -> pd.DataFrame(
     driver = webdriver.Chrome(options=chrome_options)
 
     url = f'https://opcoes.net.br/opcoes/bovespa/{symbol}'
-    driver.get(url)
-    time.sleep(1.5)
-    table = driver.find_element(By.CSS_SELECTOR, '#tblListaOpc')
-    table_html = table.get_attribute('outerHTML')
-    dfOPC = pd.read_html(str(table_html), decimal=',', thousands='.')
-    dfOPC = dfOPC[0]
-    dfOPC = dfOPC[['Ticker', 'Tipo', 'Strike', 'A/I/OTM', 'Dist. (%) do Strike', 'Último', 'Var. (%)', 'Núm. de Neg.', 'Vol. Financeiro', 'Delta', 'Gamma', 'Theta ($)', 'Vega']]
-    if call == True:
-        dfCall = dfOPC.loc[dfOPC['Tipo'] == 'CALL']
-        return dfCall
-    elif put == True:
-        dfPut = dfOPC.loc[dfOPC['Tipo'] == 'PUT']
-        return dfPut
+    response = requests.get(url)
+    if response.status_code == 404:
+        print(f'Verificar ticker inserido. Error: {response.status_code}')
     else:
-        return dfOPC
+        driver.get(url)
+        time.sleep(1.5)
+
+        table = driver.find_element(By.CSS_SELECTOR, '#tblListaOpc')
+        table_html = table.get_attribute('outerHTML')
+        dfOPC = pd.read_html(str(table_html), decimal=',', thousands='.')
+        dfOPC = dfOPC[0]
+
+            
+            
+        dfOPC = dfOPC[['Ticker', 'Tipo', 'Strike', 'A/I/OTM', 'Dist. (%) do Strike', 'Último', 'Var. (%)', 'Núm. de Neg.', 'Vol. Financeiro', 'Delta', 'Gamma', 'Theta ($)', 'Vega']]
+        if call == True:
+            dfCall = dfOPC.loc[dfOPC['Tipo'] == 'CALL']
+            return dfCall
+        elif put == True:
+            dfPut = dfOPC.loc[dfOPC['Tipo'] == 'PUT']
+            return dfPut
+        else:
+            return dfOPC
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000, default="/options/{symbol}/info")
