@@ -60,6 +60,6 @@ BBFinance/__pycache__/BBFinance.cpython-311.pyc
 BBFinance/__pycache__/BBFinance.cpython-39.pyc
 BBFinance/__pycache__/__init__.cpython-311.pyc
 BBFinance/__pycache__/__init__.cpython-39.pyc
-Data/AtivosIbov.xlsx
 __pycache__/__init__.cpython-39.pyc
 __pycache__/main.cpython-39.pyc
+docs/CNAME

@@ -3,8 +3,6 @@ import yfinance as yf
 from scipy.stats import norm
 from scipy.optimize import minimize
 from sklearn.linear_model import LinearRegression
-from py_vollib.black_scholes.greeks.analytical import delta, gamma, vega, theta
-from py_vollib.black_scholes import black_scholes
 
 #BIBLIOTECAS PARA WEBSCRAPING
 from selenium import webdriver
@@ -15,6 +13,7 @@ import chromedriver_autoinstaller
 import requests
 from bs4 import BeautifulSoup
 import time
+
 #BIBLIOTECAS DE CHAMADAS DE API
 from fastapi import FastAPI, Response, Request
 from fastapi.responses import HTMLResponse
@@ -32,7 +31,6 @@ from typing import Union
 import warnings
 warnings.filterwarnings("ignore")
 
-# chromedriver_autoinstaller.install()
 yf.pdr_override()
 
 today = datetime.today()
@@ -748,7 +746,7 @@ if __name__ == "__main__":
 responseHistory = Response(media_type="application/json")
 
 
-## SIMULADOR DE AÇOES ##
+## SIMULADORES DE AÇOES ##
 
 @app.get("/bestAssets", response_model=None)
 def best_assets(perfil= str) -> pd.DataFrame:
@@ -904,7 +902,26 @@ def best_assets_value(valor= Union[int, float]) -> pd.DataFrame:
     """
     
     # Lista de ativos
-    ativos = pd.read_excel(r'Q:\Risco\Novo Risco\pythonrisco\BBFinance\Data\AtivosIbov.xlsx')
+    chromedriver_autoinstaller.install()
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')
+    driver = webdriver.Chrome(options=chrome_options)
+
+    url = f'https://www.b3.com.br/pt_br/market-data-e-indices/indices/indices-amplos/indice-ibovespa-ibovespa-composicao-da-carteira.htm'
+    driver.get(url)
+    time.sleep(2)
+    cookies = driver.find_element(By.ID, 'onetrust-accept-btn-handler').click()
+    driver.switch_to.frame(driver.find_element(By.XPATH, '//*[@id="bvmf_iframe"]'))
+    select = driver.find_element(By.XPATH, '//*[@id="selectPage"]').click()
+    all = driver.find_element(By.CSS_SELECTOR, '#selectPage > option:nth-child(4)').click()
+
+    table = driver.find_element(By.CSS_SELECTOR, '#divContainerIframeB3 > div > div.col-lg-9.col-12.order-2.order-lg-1 > form > div:nth-child(4) > div > table')
+    table_html = table.get_attribute('outerHTML')
+    ativos = pd.read_html(str(table_html), decimal=',', thousands='.')
+    ativos = ativos[0]
+    ativos = ativos[['Código', 'Ação']]
+    ativos = ativos.drop([88,89])
+
     ativos['Código'] = ativos['Código'].apply(lambda x: x+'.SA')
 
     # Baixa os dados históricos dos ativos nos últimos 12 meses
@@ -954,8 +971,27 @@ if __name__ == "__main__":
 responseHistory = Response(media_type="application/json")
 
 
+
+## INFORMAÇÕES DE OPÇÕES ##
+
 @app.get("/options/{symbol}/info", response_model=None)
 def get_opc(symbol: str, call: True | False, put: True | False) -> pd.DataFrame():
+
+    """
+    ## Usabilidade
+
+    - Função que apresenta as principais informações das opções do ativo selecionado, informações como: Strike, Var, Gregas, dentre outras.
+
+    ## Parâmetros
+
+    - symbol -> Nome do ativo para buscar as opções referentes a ele.
+    - call -> Recebe True ou False, se True for selecionado a função ira filtrar so as CALL.
+    - put -> Recebe True ou False, se True for selecionado a função ira filtrar so as PUT.
+
+
+    """
+
+
     if symbol.endswith('.SA'):
         symbol = symbol.replace('.SA', '')
     else:
@@ -988,83 +1024,58 @@ if __name__ == "__main__":
 responseHistory = Response(media_type="application/json")
 
 
-
-
-def calc_opc(Call_or_Put = Union['call', 'put'], ativo= str, preco = float, strike= float, diasUteis= int) -> str:
+@app.get("/options/blackScholes", response_model=None)
+def black_scholes(Call_or_Put = Union['call', 'put'], ativo= str, preco = float, strike= float, diasUteis= int) -> str:
     
+    """
+    ## Usabilidade
+
+    - Função que simula o caculo do black-scholes, modelo no qual é utilizado para precificar opções no mercado de derivativos.
+    - Por se tratar de uma função em desenvolvimento não levar o resultado como verdade absoluta, mas um valor a se basear.
+
+    ## Parâmetros
+
+    - Call_or_Put -> Recebe os valores "call" e "put", por serem calculos diferentes parada cada tipo, é necessario a seleção
+    - ativo -> Inserir o ativo correspondente da função (Exemplo: 'PETR4.SA')
+    - preco -> inserir o preço do ativo selecionado
+    - strike -> Inserir o strike da opção
+    - diasUteis -> Adicionar a quantidade de dias úteis ate o vencimento da opção.
+
+    ## Exemplo
+
+    ```
+    >>> bb.black_scholes(Call_or_Put= 'call', ativo= 'PETR4.SA', preco= 26.25, strike= 26.25, diasUteis= 22 )
+    ```
+
+    """
+
     volatilidadeD = get_volatility(ativo, sevenD, currently)
     volatilidade = volatilidadeD * 252**2
-    taxaLR= 5.4563
+    taxaLR= 5.4563 # == 0.1375/252 CDI AO ANO
     
     d1 = (np.log(preco/strike) + (taxaLR + (volatilidade**2/2)*diasUteis) * (volatilidade * np.sqrt(diasUteis)))
     d2 = d1 = (volatilidade * np.sqrt(diasUteis))
 
     if Call_or_Put == 'call':
+        print('Selecionado Call')
         C = preco * norm.cdf(d1) - strike * np.exp(-taxaLR*diasUteis) * norm.cdf(d2)
         return C
     elif Call_or_Put == 'put':
+        print('Selecionado Put')
         P = strike * np.exp(-taxaLR*diasUteis) * norm.cdf(d2) - preco * norm.cdf(-d1)
         return P
     else:
         print('As opções validas sao somente as de CALL e PUT')
 
-def gregas(Call_or_Put = Union['call', 'put'], ativo= str, preco = float, strike= float, diasUteis= int):
-    if Call_or_Put == 'call':
-        Call_or_Put = 'c'
-    elif Call_or_Put == 'put':
-        Call_or_Put = 'p'
-    else:
-        print('O parametros recebe apenas')
-    volatilidadeD = get_volatility(ativo, sevenD, currently)
-    volatilidade = volatilidadeD * 252**2
-    taxaLR= 5.4563
-
-    d1 = (np.log(preco/strike) + (taxaLR + (volatilidade**2/2)*diasUteis) * (volatilidade * np.sqrt(diasUteis)))
-    d2 = d1 = (volatilidade * np.sqrt(diasUteis))
-    deltas = delta('c', preco, strike, diasUteis, taxaLR, volatilidade)
-    gammas = gamma('c', preco, strike, diasUteis, taxaLR, volatilidade)
-    vegas = vega('c', preco, strike, diasUteis, taxaLR, volatilidade)
-    thetas = theta('c', preco, strike, diasUteis, taxaLR, volatilidade)
-
-    print('Delta:', deltas)
-    print('Gamma:', gammas)
-    print('Vega:', vegas)
-    print('Theta:', thetas)
-
-
-gregas()
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000, default="/options/blackScholes")
+responseHistory = Response(media_type="application/json")
 
 
 
 
 
 #################################################################
-
-def prever_taxa_retorno(ativo):
-    
-    dados_historicos = yf.download('PETR4.SA', period='1y')
-    dados_historicos = dados_historicos.reset_index()
-
-    # Seleciona os dados históricos do ativo
-    # dados_ativo = dados_historicos.loc[dados_historicos['Ativo'] == ativo]
-
-    # Separa as variáveis independentes (datas) e dependentes (preços)
-    datas = pd.to_numeric(dados_historicos['Date'].astype(str).str.replace('-', ''))
-    precos = dados_historicos['Close']
-
-    # Cria o modelo de regressão linear
-    modelo = LinearRegression()
-
-    # Treina o modelo com os dados históricos
-    modelo.fit(datas.values.reshape(-1, 1), precos)
-
-    # Faz a previsão da taxa de retorno para o próximo período
-    data_atual = pd.Timestamp.today().strftime('%Y-%m-%d')
-    data_futura = (pd.Timestamp.today() + pd.DateOffset(days=365)).strftime('%Y-%m-%d')
-    taxa_retorno = (modelo.predict(pd.to_numeric([data_futura.replace('-', '')]).reshape(-1, 1)) / 
-                    modelo.predict(pd.to_numeric([data_atual.replace('-', '')]).reshape(-1, 1)) - 1)
-
-    return taxa_retorno[0] * -1
 
 
 # QUANTO MAIOR A TAXA DE RETORNO EM MENOS TEMPO VAI TER O RETORNO EM DIVIDENDO, A QUESTAO É PEGAR UMA TAXA DE RETORNO JUSTA OU UMA PADRAO

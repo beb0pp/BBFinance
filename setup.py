@@ -10,7 +10,7 @@ setup(
     url='https://github.com/beb0pp/BBFinance',
     author='Luis Abreu',
     author_email='luss.fel@gmail.com',
-    license='MIT',
+    license='GPLv3',
     packages=['BBFinance'],
     long_description= long_description,
     long_description_content_type='text/markdown',
