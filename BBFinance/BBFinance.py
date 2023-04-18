@@ -1015,6 +1015,7 @@ def get_opc(symbol: str, call: True | False, put: True | False) -> pd.DataFrame(
         return dfCall
     elif put == True:
         dfPut = dfOPC.loc[dfOPC['Tipo'] == 'PUT']
+        lala = 1
         return dfPut
     else:
         return dfOPC
