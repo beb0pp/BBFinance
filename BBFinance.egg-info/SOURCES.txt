@@ -1,5 +1,6 @@
 LICENSE.txt
 README.md
+bases.db
 requirements.txt
 setup.py
 teste.py

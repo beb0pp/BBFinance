@@ -3,6 +3,9 @@ import yfinance as yf
 from scipy.stats import norm
 from scipy.optimize import minimize
 from sklearn.linear_model import LinearRegression
+import tensorflow as tf
+from sklearn.preprocessing import MinMaxScaler
+
 
 #BIBLIOTECAS PARA WEBSCRAPING
 from selenium import webdriver
@@ -27,6 +30,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from typing import Union
+import sqlite3
+
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -914,6 +919,7 @@ def best_assets_value(valor= Union[int, float]) -> pd.DataFrame:
     driver.switch_to.frame(driver.find_element(By.XPATH, '//*[@id="bvmf_iframe"]'))
     select = driver.find_element(By.XPATH, '//*[@id="selectPage"]').click()
     all = driver.find_element(By.CSS_SELECTOR, '#selectPage > option:nth-child(4)').click()
+    time.sleep(1.5)
 
     table = driver.find_element(By.CSS_SELECTOR, '#divContainerIframeB3 > div > div.col-lg-9.col-12.order-2.order-lg-1 > form > div:nth-child(4) > div > table')
     table_html = table.get_attribute('outerHTML')
@@ -971,11 +977,10 @@ if __name__ == "__main__":
 responseHistory = Response(media_type="application/json")
 
 
-
 ## INFORMAÇÕES DE OPÇÕES ##
 
 @app.get("/options/{symbol}/info", response_model=None)
-def get_opc(symbol: str, call: True | False, put: True | False) -> pd.DataFrame():
+def get_opc(symbol: str, call: bool, put: bool) -> pd.DataFrame():
 
     """
     ## Usabilidade
@@ -990,7 +995,6 @@ def get_opc(symbol: str, call: True | False, put: True | False) -> pd.DataFrame(
 
 
     """
-
 
     if symbol.endswith('.SA'):
         symbol = symbol.replace('.SA', '')
@@ -1015,7 +1019,6 @@ def get_opc(symbol: str, call: True | False, put: True | False) -> pd.DataFrame(
         return dfCall
     elif put == True:
         dfPut = dfOPC.loc[dfOPC['Tipo'] == 'PUT']
-        lala = 1
         return dfPut
     else:
         driver.get(url)
@@ -1092,30 +1095,49 @@ responseHistory = Response(media_type="application/json")
 
 
 
+def carteira(dados= list):
+    conexao = sqlite3.connect(r'Q:\Risco\Novo Risco\pythonrisco\BBFinance\Banco\DataClients.db')
+    cursor = conexao.cursor()
+    consulta = "SELECT * FROM Carteiras"
+
+    df = pd.read_sql_query(consulta, conexao)    
+    conexao.close()
 
 
-#################################################################
+
+def predict_stock_trend(symbol: str) -> dict:
+
+    if not symbol.endswith('.SA'):
+        symbol = symbol +'.SA'
+    else:
+        print('Procurando dados de opções do ativo selecionado...')
+        pass
 
 
-# QUANTO MAIOR A TAXA DE RETORNO EM MENOS TEMPO VAI TER O RETORNO EM DIVIDENDO, A QUESTAO É PEGAR UMA TAXA DE RETORNO JUSTA OU UMA PADRAO
+    # Carrega os dados do arquivo CSV
+    df = yf.download(symbol, period="7d")
 
-def retornos_dividendos(ativos: Union[str, list], investimento: Union[int, float], taxa_desconto= 0.23):
-    data = pd.DataFrame(columns=['Ativo', 'Retorno com Dividendos', 'Tempo para Atingir Retorno'])
-    
-    if isinstance(ativos, str):
-        ticker = yf.Ticker(ativos)
-        preco = ticker.history(period="1y")['Close'][0]
-        dividendos = ticker.dividends.sum()
-        retorno = ((preco + dividendos) / preco - 1) * investimento
-        tempo = np.log(retorno / investimento + 1) / np.log(1 + 0.01 * taxa_desconto) / 12  # tempo em meses
-        data = data.append({'Ativo': ativos, 'Retorno com Dividendos': retorno, 'Tempo para Atingir Retorno': tempo}, ignore_index=True)
-    else:    
-        for ativo in ativos:
-            ticker = yf.Ticker(ativo)
-            preco = ticker.history(period="1y")['Close'][0]
-            dividendos = ticker.dividends.sum()
-            retorno = ((preco + dividendos) / preco - 1) * investimento
-            tempo = np.log(retorno / investimento + 1) / np.log(1 + 0.01 * taxa_desconto) / 12  # tempo em meses
-            data = data.append({'Ativo': ativo, 'Retorno com Dividendos': retorno, 'Tempo para Atingir Retorno': tempo}, ignore_index=True)
+    # Pré-processamento dos dados
+    scaler = MinMaxScaler()
+    df = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
 
-    return data
+    # Define os dados de treinamento e de teste
+    train_size = int(len(df) * 0.8)
+    train_data = df.iloc[:train_size]
+    test_data = df.iloc[train_size:]
+
+    # Define o modelo da rede neural
+    model = tf.keras.Sequential([
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dense(1)
+    ])
+    model.compile(optimizer='adam', loss='mean_squared_error')
+
+    # Treina o modelo
+    model.fit(train_data.drop(['Close'], axis=1), train_data['Close'], epochs=50, batch_size=32)
+
+    # Faz a previsão com os dados de teste
+    predictions = model.predict(test_data.drop(['Close'], axis=1))
+    # Retorna as previsões
+    return predictions
+
