@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: BBFinance
-Version: 1.5.0
+Version: 1.5.5
 Summary: Uma biblioteca com o objetivo de adquirir informações de ações do mercado financeiro de maneira rapida e prática, afim de incluir todos no mercado
 Home-page: https://github.com/beb0pp/BBFinance
 Author: Luis Abreu
@@ -20,6 +20,10 @@ Biblioteca de análise financeira
 ## Descrição
 
 Esta biblioteca fornece funções e classes úteis para a análise de dados financeiros, incluindo cotações de ações, índices de mercado e outras informações relevantes para o mercado financeiro.
+
+## GitHub
+
+Segue o link para o repositorio do GitHub -> https://github.com/beb0pp/BBFinance
 
 ## Funcionalidades
 

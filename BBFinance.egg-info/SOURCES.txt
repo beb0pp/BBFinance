@@ -1,9 +1,7 @@
 LICENSE.txt
 README.md
-bases.db
 requirements.txt
 setup.py
-teste.py
 BBFdocs/mkdocs.yml
 BBFdocs/docs/index.md
 BBFdocs/site/404.html
@@ -50,6 +48,7 @@ BBFdocs/site/search/lunr.js
 BBFdocs/site/search/main.js
 BBFdocs/site/search/search_index.json
 BBFdocs/site/search/worker.js
+BBFinance/Apresentacao.py
 BBFinance/BBFinance.py
 BBFinance/__init__.py
 BBFinance.egg-info/PKG-INFO

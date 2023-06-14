@@ -1,3 +1,8 @@
+                                                                                            ################################################
+                                                                                                    # LUIS FELIPE MACARIO DE ABREU #
+                                                                                                            # 921104518 #
+                                                                                            ################################################
+
 #BIBLIOTECAS PARA ANALISE DE ATIVOS
 import yfinance as yf
 from scipy.stats import norm
@@ -31,7 +36,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from typing import Union
 import sqlite3
-
+import os
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -52,8 +57,9 @@ sevenD = seven_days_ago.strftime('%Y-%m-%d')
 currently = today.strftime('%Y-%m-%d')
 
 app = FastAPI()
-# templates = Jinja2Templates(directory="Site")
-# app.mount("/Static", StaticFiles(directory="Static"), name="Static")
+# templates = Jinja2Templates(directory="C:\\Users\\Luis\\ProjetoFin\\BBFinance\\BBFinance\\templates")
+
+# app.mount("/static", StaticFiles(directory="BBFinance\static"), name="static")
 
 # @app.get("/", response_class=HTMLResponse)
 # async def read_root(request: Request):
@@ -71,7 +77,41 @@ def formataValoresNumero(df, nomeColuna):
 
     return df
 
+
+################################################################
+
+                    ##### PAGINA INICIAL #####
+                    
+################################################################
+
+
+#INICIO DA API
+@app.get("/", response_class=HTMLResponse)
+def read_root():
+    
+        return 'Bem vindo a BBFinance, uma biblioteca para analise de mercado financeiro.'
+
+    # library_name = "BBFinance"
+    
+    # return templates.TemplateResponse(r"BBFinance\templates\Site\index.html", {"request": request, "library_name": library_name})
+
+if __name__ == '__main__':
+    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="/")
+response = Response(media_type="application/json")
+
+
+
+
+################################################################
+
+                    ##### FUNÇOES #####
+                    
+################################################################
+
+
+
 ## INFOS DAS AÇOES ##
+
 @app.get("/stocks/{symbol}/info", response_model=None)
 def get_info(symbol: str) -> dict:
     
@@ -92,7 +132,7 @@ def get_info(symbol: str) -> dict:
     else:
         print('Ticker Invalido')
     # Obtenha o valor a mercado da açao
-    current_price = stock.info['regularMarketPrice']
+    current_price = stock.info['regularMarketPreviousClose']
 
     # Obtenha o nome completo da empresa
     company_name = stock.info['longName']
@@ -101,11 +141,15 @@ def get_info(symbol: str) -> dict:
     dividend = stock.dividends
     dividend = dividend.iloc[-1:].sum()
     
+    #Volume a mercado
+    vol = stock.info['regularMarketVolume']
+    
     # Crie um objeto JSON com as informações da ação
-    json_data = {'symbol': symbol, 
-                 'current_price': current_price, 
-                 'company_name': company_name,
-                 'dividends' : dividend}
+    json_data = {'Símbolo': symbol, 
+                 'Preço': current_price,
+                 'Volume': vol,
+                 'Nome da companhia': company_name,
+                 'Dividendos' : dividend}
     
     # formatted_json = json.dumps(json_data, indent=4)
 
@@ -118,7 +162,7 @@ response = Response(media_type="application/json")
 
 ## HISTORICO DAS AÇOES ##
 
-@app.get("/stocks/{symbol}/history", response_model=None)
+@app.get("/stocks/{symbol}/{period}/history", response_model=None)
 def get_stock_history(symbol: str, period: str = '1y') -> pd.DataFrame:
     
     """
@@ -270,7 +314,7 @@ responseHistory = Response(media_type="application/json")
 
 ## VOLATILIDADE ##
 
-@app.get("stocks/{symbol}/volatility", response_model=None)
+@app.get("stocks/{symbol}/{start_date}/{end_date}/volatility", response_model=None)
 def get_volatility(symbol: str, start_date: str, end_date: str) -> str:
     
     """
@@ -360,7 +404,7 @@ responseHistory = Response(media_type="application/json")
 
 ## VAR ##
     
-@app.get("stocks/{symbol}/VaR", response_model=None)
+@app.get("stocks/{symbol}/{confidence_level}/{lookback_period}/VaR", response_model=None)
 def get_var(symbol: str, confidence_level: float, lookback_period: int) -> dict:
     
     """
@@ -403,8 +447,8 @@ responseHistory = Response(media_type="application/json")
 
 ## CARTEIRA DE ATIVOS ##
 
-@app.get("stocks/{symbol}/AnnualReturn", response_model=None)
-def asset_portfolio(symbols: Union[str, list], start_date: str, end_date: str) -> pd.DataFrame:
+@app.get("stocks/{symbols}/{start_date}/{end_date}/AnnualReturn", response_model=None)
+def asset_portfolio(symbols: str, start_date: str, end_date: str) -> pd.DataFrame:
     """
     ## Usabilidade
     - Recebe uma lista e retorna um DataFrame com as informações dos ativos e algumas estatísticas básicas. \n
@@ -503,13 +547,13 @@ def asset_portfolio(symbols: Union[str, list], start_date: str, end_date: str) -
         print("Tipo inválido. Digite uma string ou uma lista.")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000, default="stocks/{symbol}/AnnualReturn")
+    uvicorn.run(app, host="127.0.0.1", port=8000, default="stocks/{symbols}/AnnualReturn")
 responseHistory = Response(media_type="application/json")
 
 
 ## ALOCAÇAO DE MARKOWITZ ##
 
-@app.get("stocks/{symbol}/MarkowitzAllocationn")
+@app.get("stocks/{symbol}/{start_date}/{end_date}/MarkowitzAllocationn")
 def markowitz_allocation(symbols: list, star_date: str, end_date: str) -> dict: 
     
     """
@@ -575,7 +619,7 @@ responseHistory = Response(media_type="application/json")
 
 ## BUSCA INFO DE FUNDOS ##
 
-@app.get("/infoFunds", response_model=None)
+@app.get("/{symbol}/infoFunds", response_model=None)
 def get_funds(symbol: str) -> pd.DataFrame:
 
     """
@@ -607,7 +651,7 @@ responseHistory = Response(media_type="application/json")
 
 ## COMPARADOR DE FUNDOS COM BASE NO SETOR ##
 
-@app.get("/compareSetorFunds", response_model=None)
+@app.get("/{setor}/{rentabilidade_min}/compareSetorFunds", response_model=None)
 def compare_setor_funds(setor: str, rentabilidade_min = 0) -> pd.DataFrame:
     
     """
@@ -753,7 +797,7 @@ responseHistory = Response(media_type="application/json")
 
 ## SIMULADORES DE AÇOES ##
 
-@app.get("/bestAssets", response_model=None)
+@app.get("/{perfil}/bestAssets", response_model=None)
 def best_assets(perfil= str) -> pd.DataFrame:
     
     """
@@ -893,7 +937,7 @@ if __name__ == "__main__":
 responseHistory = Response(media_type="application/json")
 
 
-@app.get("/bestAssetsValues", response_model=None)
+@app.get("/{valor}/bestAssetsValues", response_model=None)
 def best_assets_value(valor= Union[int, float]) -> pd.DataFrame:
     
     """

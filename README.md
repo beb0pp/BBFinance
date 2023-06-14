@@ -6,6 +6,10 @@ Biblioteca de análise financeira
 
 Esta biblioteca fornece funções e classes úteis para a análise de dados financeiros, incluindo cotações de ações, índices de mercado e outras informações relevantes para o mercado financeiro.
 
+## GitHub
+
+Segue o link para o repositorio do GitHub -> https://github.com/beb0pp/BBFinance
+
 ## Funcionalidades
 
 * Recuperação de cotações de ações de diversas fontes

@@ -5,7 +5,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='BBFinance',
-    version='1.5.0',
+    version='1.5.5',
     description='Uma biblioteca com o objetivo de adquirir informações de ações do mercado financeiro de maneira rapida e prática, afim de incluir todos no mercado',
     url='https://github.com/beb0pp/BBFinance',
     author='Luis Abreu',
@@ -15,7 +15,7 @@ setup(
     long_description= long_description,
     long_description_content_type='text/markdown',
     install_requires=[
-        'yfinance==0.2.14',
+        'yfinance==0.2.20',
         'selenium>=3.141.0',
         'pandas-datareader>=0.10.0',
         'json5>=0.9.6',
@@ -30,7 +30,8 @@ setup(
         'Unicode>=1.3.6',
         'typing_extensions>=4.5.0',
         'scikit-image>=0.19.3',
-        'scikit-learn>=1.2.2'
+        'scikit-learn>=1.2.2',
+        'tensorflow==2.12.0'
         
     ],
     classifiers=[
