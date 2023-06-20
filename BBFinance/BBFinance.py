@@ -9,6 +9,8 @@ from scipy.stats import norm
 from scipy.optimize import minimize
 from sklearn.linear_model import LinearRegression
 import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
 from sklearn.preprocessing import MinMaxScaler
 
 
@@ -1149,39 +1151,59 @@ def carteira(dados= list):
 
 
 
-def predict_stock_trend(symbol: str) -> dict:
-
+def predict_stock_value(symbol: str) -> float:
     if not symbol.endswith('.SA'):
-        symbol = symbol +'.SA'
+        symbol = symbol + '.SA'
     else:
         print('Procurando dados de opções do ativo selecionado...')
-        pass
-
 
     # Carrega os dados do arquivo CSV
-    df = yf.download(symbol, period="7d")
+    df = yf.download(symbol, period="1y")
 
-    # Pré-processamento dos dados
+    # Normalização dos dados
     scaler = MinMaxScaler()
-    df = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
+    df_normalized = pd.DataFrame(scaler.fit_transform(df['Close'].values.reshape(-1, 1)), columns=['Close'])
 
     # Define os dados de treinamento e de teste
-    train_size = int(len(df) * 0.8)
-    train_data = df.iloc[:train_size]
-    test_data = df.iloc[train_size:]
+    train_size = int(len(df_normalized) * 0.8)
+    train_data = df_normalized[:train_size]
+    test_data = df_normalized[train_size:]
 
-    # Define o modelo da rede neural
-    model = tf.keras.Sequential([
-        tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dense(1)
-    ])
-    model.compile(optimizer='adam', loss='mean_squared_error')
+    # Aumenta o período de dados
+    window_size = 30
+    train_windows = [train_data[i:i+window_size] for i in range(len(train_data)-window_size)]
+    train_labels = [train_data.iloc[i+window_size]['Close'] for i in range(len(train_data)-window_size)]
+    train_windows = np.array(train_windows)
+    train_labels = np.array(train_labels)
+
+    test_windows = [test_data[i:i+window_size] for i in range(len(test_data)-window_size)]
+    test_labels = [test_data.iloc[i+window_size]['Close'] for i in range(len(test_data)-window_size)]
+    test_windows = np.array(test_windows)
+    test_labels = np.array(test_labels)
+
+    # Define a arquitetura da rede neural
+    model = Sequential()
+    model.add(Dense(64, activation='relu', input_shape=(window_size, 1)))
+    model.add(Dropout(0.2))
+    model.add(Dense(32, activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(1))
+
+    model.compile(optimizer='adam', loss='mean_squared_error', run_eagerly=True)
 
     # Treina o modelo
-    model.fit(train_data.drop(['Close'], axis=1), train_data['Close'], epochs=50, batch_size=32)
+    model.fit(train_windows, train_labels, epochs=85, batch_size=56)
 
     # Faz a previsão com os dados de teste
-    predictions = model.predict(test_data.drop(['Close'], axis=1))
-    # Retorna as previsões
-    return predictions
+    predictions = model.predict(test_windows)
 
+    # Inverte a transformação do scaler
+    predicted_values = scaler.inverse_transform(predictions.reshape(-1, 1))
+
+    # Retorna a previsão de valor para a ação
+    return predicted_values[-1][0]
+
+# Exemplo de uso
+symbol = 'VALE3.SA'
+previsao = predict_stock_value(symbol)
+print(f'A previsão de valor para a ação {symbol} é {previsao:.2f}')
