@@ -1207,3 +1207,31 @@ def predict_stock_value(symbol: str) -> float:
 symbol = 'VALE3.SA'
 previsao = predict_stock_value(symbol)
 print(f'A previsão de valor para a ação {symbol} é {previsao:.2f}')
+
+@app.get("/ibovespa", response_model=None)
+def pega_ibov():
+    market = yf.Ticker("^BVSP") # Índice Bovespa como mercado de referência
+    infoMarket = market.info
+
+    Abertura = infoMarket['open']
+    # Crie um objeto JSON com as informações da ação
+    json_data = {'Valor Abertura': Abertura}
+    
+    return json_data
+
+if __name__ == '__main__':
+    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="/ibovespa")
+response = Response(media_type="application/json")
+
+@app.get("/dolar", response_model=None)
+def pega_ibov():
+    data = yf.download("USDBRL=X", period="1d")
+
+    # Crie um objeto JSON com as informações da ação
+    json_data = {'Valor Abertura': data['Close'][0]}
+    
+    return json_data
+
+if __name__ == '__main__':
+    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="/ibovespa")
+response = Response(media_type="application/json")
