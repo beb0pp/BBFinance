@@ -25,12 +25,14 @@ from bs4 import BeautifulSoup
 import time
 
 #BIBLIOTECAS DE CHAMADAS DE API
-from fastapi import FastAPI, Response, Request
+from fastapi import FastAPI, Response, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import json
 import uvicorn
+import pydantic
+from pydantic import BaseModel
 
 #BIBLIOTECAS DE ANALISE DE DATAFRAMES, DADOS E CRIAÇAO DE CLASSES
 import pandas as pd
@@ -79,6 +81,10 @@ def formataValoresNumero(df, nomeColuna):
 
     return df
 
+# Função de processamento em segundo plano
+def processamento_em_segundo_plano():
+    time.sleep(5)  # Simula um processamento demorado
+    return {"message": "Requisição em processamento. Por favor, aguarde."}
 
 ################################################################
 
@@ -98,12 +104,8 @@ def read_root():
     # return templates.TemplateResponse(r"BBFinance\templates\Site\index.html", {"request": request, "library_name": library_name})
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="/")
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/")
 response = Response(media_type="application/json")
-
-
-
-
 ################################################################
 
                     ##### FUNÇOES #####
@@ -111,11 +113,10 @@ response = Response(media_type="application/json")
 ################################################################
 
 
-
 ## INFOS DAS AÇOES ##
 
 @app.get("/stocks/{symbol}/info", response_model=None)
-def get_info(symbol: str) -> dict:
+def get_info(symbol: str, background_tasks: BackgroundTasks) -> dict:
     
     """
     ## Usabilidade 
@@ -125,7 +126,14 @@ def get_info(symbol: str) -> dict:
     - symbol -> Nome do Ativo para a busca \n
     
     """
+    background_tasks.add_task(processamento_em_segundo_plano)
     
+    if not symbol.endswith('.SA'):
+        symbol += '.SA'
+    else:
+        print('Procurando dados de opções do ativo selecionado...')
+
+
     stock = yf.Ticker(symbol)
     info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO
     tipoInfo = type(info)
@@ -158,14 +166,14 @@ def get_info(symbol: str) -> dict:
     return json_data
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/info")
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/stocks/{symbol}/info")
 response = Response(media_type="application/json")
 
 
 ## HISTORICO DAS AÇOES ##
 
 @app.get("/stocks/{symbol}/{period}/history", response_model=None)
-def get_stock_history(symbol: str, period: str = '1y') -> pd.DataFrame:
+def get_stock_history(symbol: str, background_tasks: BackgroundTasks, period: str = '1y') -> dict:
     
     """
     ## Usabilidade 
@@ -177,7 +185,14 @@ def get_stock_history(symbol: str, period: str = '1y') -> pd.DataFrame:
     - period -> Data em ANOS para a busca das informaçoes do Ativo \n
     
     """
-    
+    background_tasks.add_task(processamento_em_segundo_plano)
+
+    if not symbol.endswith('.SA'):
+        symbol += '.SA'
+    else:
+        print('Procurando dados de opções do ativo selecionado...')
+
+
     stock = yf.Ticker(symbol)
     info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO
     tipoInfo = type(info)
@@ -194,7 +209,9 @@ def get_stock_history(symbol: str, period: str = '1y') -> pd.DataFrame:
         history_dict = history.to_dict(orient="list")
         history_df = pd.DataFrame.from_dict(history_dict).reset_index(drop=False)
 
-        return history_df
+        tabular_data = history_df.to_string(index=False)
+
+        return Response(content=tabular_data, media_type="text/plain")
     
         # json_data = {'symbol': symbol,
         # "history":  history_df.to_dict(orient="records"),
@@ -204,14 +221,13 @@ def get_stock_history(symbol: str, period: str = '1y') -> pd.DataFrame:
         # print(formatted_json)
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/history")
-responseHistory = Response(media_type="application/json")
-
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/stocks/{symbol}/{period}/history")
+response = Response(media_type="application/json")
 
 ## TENDENCIA DE PREÇO ##
 
 @app.get("/stock/{symbol}/trend", response_model=None)
-def get_stock_trend(symbol: str) -> dict:
+def get_stock_trend(symbol: str, background_tasks: BackgroundTasks) -> dict:
     
     """
     ## Usabilidade 
@@ -222,7 +238,14 @@ def get_stock_trend(symbol: str) -> dict:
     - symbol -> Nome do Ativo para a busca \n
     
     """
-    
+    background_tasks.add_task(processamento_em_segundo_plano)
+
+    if not symbol.endswith('.SA'):
+        symbol += '.SA'
+    else:
+        print('Procurando dados de opções do ativo selecionado...')
+
+
     stock = yf.Ticker(symbol)
     info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO
     tipoInfo = type(info)
@@ -244,14 +267,14 @@ def get_stock_trend(symbol: str) -> dict:
     return json_data
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/trend")
-responseHistory = Response(media_type="application/json")
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/stocks/{symbol}/trend")
+response = Response(media_type="application/json")
 
 
 ## RSI ##
 
 @app.get("/stock/{symbol}/technical", response_model=None)
-def get_stock_technicals(symbol: str) -> dict:
+def get_stock_technicals(symbol: str, background_tasks: BackgroundTasks) -> dict:
     
     """
     ## Usabilidade 
@@ -268,6 +291,13 @@ def get_stock_technicals(symbol: str) -> dict:
     
     """
     
+    background_tasks.add_task(processamento_em_segundo_plano)
+
+    if not symbol.endswith('.SA'):
+        symbol += '.SA'
+    else:
+        print('Procurando dados de opções do ativo selecionado...')
+
     stock = yf.Ticker(symbol)
     info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO, SENAO VAI PASSAR
     tipoInfo = type(info)
@@ -310,14 +340,14 @@ def get_stock_technicals(symbol: str) -> dict:
     return json_data
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/technical")
-responseHistory = Response(media_type="application/json")
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/stocks/{symbol}/technical")
+response = Response(media_type="application/json")
 
 
 ## VOLATILIDADE ##
 
-@app.get("stocks/{symbol}/{start_date}/{end_date}/volatility", response_model=None)
-def get_volatility(symbol: str, start_date: str, end_date: str) -> str:
+@app.get("/stocks/{symbol}/{start_date}/{end_date}/volatility", response_model=None)
+def get_volatility(symbol: str, start_date: str, end_date: str, background_tasks: BackgroundTasks) -> str:
     
     """
     ## Usabilidade 
@@ -328,7 +358,13 @@ def get_volatility(symbol: str, start_date: str, end_date: str) -> str:
     - start_date -> Data de Inicio da busca das infos (preco, volume, etc) do ativo \n
     - end_date -> Data Final para a busca das infos (preco, volume, etc) do ativo \n
     """
-    
+    background_tasks.add_task(processamento_em_segundo_plano)
+
+    if not symbol.endswith('.SA'):
+        symbol += '.SA'
+    else:
+        print('Procurando dados de opções do ativo selecionado...')
+
     try:
         stock_data = yf.download(symbol, start=start_date, end=end_date)
         if stock_data.empty:
@@ -339,17 +375,19 @@ def get_volatility(symbol: str, start_date: str, end_date: str) -> str:
     log_returns = np.log(stock_data['Close']/stock_data['Close'].shift(1))
     volatility = np.sqrt(252*log_returns.var())
 
+    volatility = str(volatility)
+
     return volatility
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/volatility")
-responseHistory = Response(media_type="application/json")
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/stocks/{symbol}/{start_date}/{end_date}/volatility")
+response = Response(media_type="application/json")
 
 
 ## BETA ##
 
-@app.get("stocks/{symbol}/beta", response_model=None)
-def get_beta(symbol: str) -> dict:
+@app.get("/stocks/{symbol}/beta", response_model=None)
+def get_beta(symbol: str, background_tasks: BackgroundTasks) -> dict:
     
     """
     ## Usabilidade 
@@ -361,6 +399,13 @@ def get_beta(symbol: str) -> dict:
     - market -> Como padrao, Mercado: IBOVESPA / BVSP
     """
     
+    background_tasks.add_task(processamento_em_segundo_plano)
+
+    if not symbol.endswith('.SA'):
+        symbol += '.SA'
+    else:
+        print('Procurando dados de opções do ativo selecionado...')
+
     # Obter os dados do ativo e do mercado
     asset = yf.Ticker(symbol)
     market = yf.Ticker("^BVSP") # Índice Bovespa como mercado de referência
@@ -400,14 +445,14 @@ def get_beta(symbol: str) -> dict:
     return json_data
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/beta")
-responseHistory = Response(media_type="application/json")
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/stocks/{symbol}/beta")
+response = Response(media_type="application/json")
 
 
 ## VAR ##
     
-@app.get("stocks/{symbol}/{confidence_level}/{lookback_period}/VaR", response_model=None)
-def get_var(symbol: str, confidence_level: float, lookback_period: int) -> dict:
+@app.get("/stocks/{symbol}/{confidence_level}/{lookback_period}/VaR", response_model=None)
+def get_var(symbol: str, confidence_level: float, lookback_period: int, background_tasks: BackgroundTasks) -> dict:
     
     """
     ## Usabilidade 
@@ -420,7 +465,13 @@ def get_var(symbol: str, confidence_level: float, lookback_period: int) -> dict:
     - lookback_period -> Periodo EM DIAS a ser considerado para o cálculo do VaR
 
     """
-    
+    background_tasks.add_task(processamento_em_segundo_plano)
+
+    if not symbol.endswith('.SA'):
+        symbol += '.SA'
+    else:
+        print('Procurando dados de opções do ativo selecionado...')
+
     stock = yf.Ticker(symbol)
     info = stock.info #DADO Q VEM COMO UM DICIONARIO, SE NAO FOR UM DICIONARIO VAI APRESENTAR TICKER INVALIDO, SENAO VAI PASSAR
     tipoInfo = type(info)
@@ -443,14 +494,13 @@ def get_var(symbol: str, confidence_level: float, lookback_period: int) -> dict:
     return Var
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="stocks/{symbol}/VaR")
-responseHistory = Response(media_type="application/json")
-
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/stocks/{symbol}/{confidence_level}/{lookback_period}/VaR")
+response = Response(media_type="application/json")
 
 ## CARTEIRA DE ATIVOS ##
 
-@app.get("stocks/{symbols}/{start_date}/{end_date}/AnnualReturn", response_model=None)
-def asset_portfolio(symbols: str, start_date: str, end_date: str) -> pd.DataFrame:
+@app.get("/stocks/{symbols}/{start_date}/{end_date}/AnnualReturn", response_model=None)
+def asset_portfolio(symbols: str, start_date: str, end_date: str, background_tasks: BackgroundTasks) -> dict:
     """
     ## Usabilidade
     - Recebe uma lista e retorna um DataFrame com as informações dos ativos e algumas estatísticas básicas. \n
@@ -462,9 +512,16 @@ def asset_portfolio(symbols: str, start_date: str, end_date: str) -> pd.DataFram
     
     """
     # Importar dados dos ativos
-    
+    background_tasks.add_task(processamento_em_segundo_plano)
+
     if isinstance(symbols, str):
         print(f"Você digitou uma string: {symbols}")
+
+        if not symbols.endswith('.SA'):
+            symbol += '.SA'
+        else:
+            print('Procurando dados de opções do ativo selecionado...')
+
         dados = yf.download(tickers= symbols, start= start_date, end= end_date, group_by= 'ticker')
             
         try:
@@ -502,7 +559,10 @@ def asset_portfolio(symbols: str, start_date: str, end_date: str) -> pd.DataFram
                 'Retorno total': retorno_total
             }, index=[1])
             
-            return valueSymbols
+            tabular_data = valueSymbols.to_string(index=False)
+
+            return Response(content=tabular_data, media_type="text/plain")
+
         
         except:
             print("Ticker inválido")
@@ -544,19 +604,21 @@ def asset_portfolio(symbols: str, start_date: str, end_date: str) -> pd.DataFram
             
             valueDF = pd.concat([returnSymbols, valueDF])
 
-        return valueDF
+        tabular_data = valueDF.to_string(index=False)
+
+        return Response(content=tabular_data, media_type="text/plain")
+
     else:
         print("Tipo inválido. Digite uma string ou uma lista.")
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000, default="stocks/{symbols}/AnnualReturn")
-responseHistory = Response(media_type="application/json")
-
+if __name__ == '__main__':
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/stocks/{symbol}/{start_date}/{end_date}/AnnualReturn")
+response = Response(media_type="application/json")
 
 ## ALOCAÇAO DE MARKOWITZ ##
 
-@app.get("stocks/{symbol}/{start_date}/{end_date}/MarkowitzAllocationn")
-def markowitz_allocation(symbols: list, star_date: str, end_date: str) -> dict: 
+@app.get("/stocks/{symbol}/{start_date}/{end_date}/MarkowitzAllocationn")
+def markowitz_allocation(symbols: list, star_date: str, end_date: str, background_tasks: BackgroundTasks) -> dict: 
     
     """
     ## Usabilidades 
@@ -577,6 +639,14 @@ def markowitz_allocation(symbols: list, star_date: str, end_date: str) -> dict:
     - end_date -> Data Final para a busca das infos (preco, volume, etc) do ativo \n
 
     """
+    
+    background_tasks.add_task(processamento_em_segundo_plano)
+
+    if not symbols.endswith('.SA'):
+        symbols += '.SA'
+    else:
+        print('Procurando dados de opções do ativo selecionado...')
+    
     dados = yf.download(symbols, start=star_date, end=end_date)['Adj Close']
 
     # Calculando os retornos diários dos ativos
@@ -614,15 +684,14 @@ def markowitz_allocation(symbols: list, star_date: str, end_date: str) -> dict:
     
     return json_data
     
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000, default="stocks/{symbol}/MarkowitzAllocation")
-responseHistory = Response(media_type="application/json")
-
+if __name__ == '__main__':
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/stocks/{symbol}/{start_date}/{end_date}/MarkowitzAllocationn")
+response = Response(media_type="application/json")
 
 ## BUSCA INFO DE FUNDOS ##
 
-@app.get("/{symbol}/infoFunds", response_model=None)
-def get_funds(symbol: str) -> pd.DataFrame:
+@app.get("/funds/{symbol}/infoFunds", response_model=None)
+def get_funds(symbol: str, background_tasks: BackgroundTasks) -> dict:
 
     """
     ## Usabilidade
@@ -634,6 +703,13 @@ def get_funds(symbol: str) -> pd.DataFrame:
 
     """
 
+    background_tasks.add_task(processamento_em_segundo_plano)
+
+    if not symbol.endswith('.SA'):
+        symbol += '.SA'
+    else:
+        print('Procurando dados de opções do ativo selecionado...')
+
     url = "https://www.fundsexplorer.com.br/ranking"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -644,17 +720,20 @@ def get_funds(symbol: str) -> pd.DataFrame:
     valuesFI = fundsDF.loc[(fundsDF['Código do fundo'] == symbol)]
     valuesFI = valuesFI[['Código do fundo', 'Setor', 'Preço Atual', 'Dividendo', 'Variação Preço', "Rentab. Período"]]
 
-    return valuesFI
+    tabular_data = valuesFI.to_string(index=False)
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000, default="/infoFunds")
-responseHistory = Response(media_type="application/json")
+    return Response(content=tabular_data, media_type="text/plain")
+
+
+if __name__ == '__main__':
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/funds/{symbol}/infoFunds")
+response = Response(media_type="application/json")
 
 
 ## COMPARADOR DE FUNDOS COM BASE NO SETOR ##
 
-@app.get("/{setor}/{rentabilidade_min}/compareSetorFunds", response_model=None)
-def compare_setor_funds(setor: str, rentabilidade_min = 0) -> pd.DataFrame:
+@app.get("/funds/{setor}/{rentabilidade_min}/compareSetorFunds", response_model=None)
+def compare_setor_funds(setor: str, rentabilidade_min = 0, background_tasks= BackgroundTasks) -> dict:
     
     """
     ## Usabilidade
@@ -686,7 +765,8 @@ def compare_setor_funds(setor: str, rentabilidade_min = 0) -> pd.DataFrame:
     ```
 
     """
-    
+    background_tasks.add_task(processamento_em_segundo_plano)
+
     url = "https://www.fundsexplorer.com.br/ranking"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -717,18 +797,20 @@ def compare_setor_funds(setor: str, rentabilidade_min = 0) -> pd.DataFrame:
     })
     
     resultados = resultados.fillna('O setor/valor nao foi encontrado')
+    tabular_data = resultados.to_string(index=False)
 
-    return resultados
+    return Response(content=tabular_data, media_type="text/plain")
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000, default="/compareSetorFunds")
-responseHistory = Response(media_type="application/json")
+
+if __name__ == '__main__':
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/funds/{setor}/{rentabilidade_min}/compareSetorFunds")
+response = Response(media_type="application/json")
 
 
 ## COMPARADOR DE FUNDOS ##
 
-@app.get("/compareFunds", response_model=None)
-def compare_funds(listfund= None, fund_1= str, fund_2= str) -> pd.DataFrame:
+@app.get("/funds/compareFunds", response_model=None)
+def compare_funds(listfund= None, fund_1= str, fund_2= str, background_tasks= BackgroundTasks) -> dict:
     """
     ## Usabilidade
     
@@ -752,6 +834,8 @@ def compare_funds(listfund= None, fund_1= str, fund_2= str) -> pd.DataFrame:
     
     """
 
+    background_tasks.add_task(processamento_em_segundo_plano)
+
     if fund_1 and fund_2 != None:
         url = "https://www.fundsexplorer.com.br/ranking"
         response = requests.get(url)
@@ -769,7 +853,10 @@ def compare_funds(listfund= None, fund_1= str, fund_2= str) -> pd.DataFrame:
         if unit.empty:
             print('Nao foram apresentado dados dos fundos para verificaçao unica')
         else:
-            return unit
+            tabular_data = unit.to_string(index=False)
+
+            return Response(content=tabular_data, media_type="text/plain")
+
         
     if listfund is None:
         listfund = []
@@ -790,17 +877,19 @@ def compare_funds(listfund= None, fund_1= str, fund_2= str) -> pd.DataFrame:
         if valuerisk.empty:
             print('Nao foram apresentado dados dos fundos para verificaçao múltipla')
         else:
-            return valuerisk
-                        
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000, default="/compareFunds")
-responseHistory = Response(media_type="application/json")
+            tabular_data = valuerisk.to_string(index=False)
+
+            return Response(content=tabular_data, media_type="text/plain")
+                     
+if __name__ == '__main__':
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/funds/compareFunds")
+response = Response(media_type="application/json")
 
 
 ## SIMULADORES DE AÇOES ##
 
-@app.get("/{perfil}/bestAssets", response_model=None)
-def best_assets(perfil= str) -> pd.DataFrame:
+@app.get("/profile/{perfil}/bestAssets", response_model=None)
+def best_assets(perfil= str, background_tasks= BackgroundTasks) -> dict:
     
     """
     ## Usabilidade
@@ -827,7 +916,8 @@ def best_assets(perfil= str) -> pd.DataFrame:
     ```
     
     """
-    
+    background_tasks.add_task(processamento_em_segundo_plano)
+
     # Lista de ativos
     url = "https://www.dadosdemercado.com.br/bolsa/acoes"
     response = requests.get(url)
@@ -883,8 +973,10 @@ def best_assets(perfil= str) -> pd.DataFrame:
             if dataAlocation_Agressive.empty:
                 pass
             else:
-                return dataAlocation_Agressive
-            
+                tabular_data = dataAlocation_Agressive.to_string(index=False)
+
+                return Response(content=tabular_data, media_type="text/plain")
+ 
         elif perfil == 'Moderado':
             # Análise para um cliente moderado
             moderado = []
@@ -907,8 +999,10 @@ def best_assets(perfil= str) -> pd.DataFrame:
             if dataAlocation_Moderade.empty:
                 pass
             else:
-                return dataAlocation_Moderade
-            
+                tabular_data = dataAlocation_Moderade.to_string(index=False)
+
+                return Response(content=tabular_data, media_type="text/plain")
+     
         elif perfil == 'Conservador':
             # Análise para um cliente conservador
             conservador = []
@@ -930,17 +1024,19 @@ def best_assets(perfil= str) -> pd.DataFrame:
             if dataAlocation_Conservative.empty:
                 pass
             else:
-                return dataAlocation_Conservative
+                tabular_data = dataAlocation_Conservative.to_string(index=False)
+
+                return Response(content=tabular_data, media_type="text/plain")
         else:
             print('Perfil não reconhecido, os perfis disponiveis estao presentes na explicação da função')
             
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000, default="/bestAssets")
-responseHistory = Response(media_type="application/json")
+if __name__ == '__main__':
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/profile/{perfil}/bestAssets")
+response = Response(media_type="application/json")
 
 
-@app.get("/{valor}/bestAssetsValues", response_model=None)
-def best_assets_value(valor= Union[int, float]) -> pd.DataFrame:
+@app.get("/stocks/{valor}/bestAssetsValues", response_model=None)
+def best_assets_value(valor= Union[int, float], background_tasks= BackgroundTasks) -> dict:
     
     """
     ## Usabilidade
@@ -951,7 +1047,8 @@ def best_assets_value(valor= Union[int, float]) -> pd.DataFrame:
     - valor -> Valor do investimento, por padrão 0
 
     """
-    
+    background_tasks.add_task(processamento_em_segundo_plano)
+
     # Lista de ativos
     chromedriver_autoinstaller.install()
     chrome_options = Options()
@@ -1016,17 +1113,19 @@ def best_assets_value(valor= Union[int, float]) -> pd.DataFrame:
     ativos_df['Retorno Aprox.'] = ListaRetorno
     
     # Retorna o dataframe com os ativos selecionados e seus valores alocados
-    return ativos_df[['Ativos', 'Qtd Necessaria (R$)', 'Retorno Aprox.']]
+    tabular_data = ativos_df[['Ativos', 'Qtd Necessaria (R$)', 'Retorno Aprox.']].to_string(index=False)
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000, default="/bestAssetsValues")
-responseHistory = Response(media_type="application/json")
+    return Response(content=tabular_data, media_type="text/plain")
+
+if __name__ == '__main__':
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/stocks/{valor}/bestAssetsValues")
+response = Response(media_type="application/json")
 
 
 ## INFORMAÇÕES DE OPÇÕES ##
 
-@app.get("/options/{symbol}/info", response_model=None)
-def get_opc(symbol: str, call: bool, put: bool) -> pd.DataFrame():
+@app.get("/options/{symbol}/{call}/{put}/info", response_model=None)
+def get_opc(symbol: str, call: bool, put: bool, background_tasks: BackgroundTasks) -> dict:
 
     """
     ## Usabilidade
@@ -1042,11 +1141,13 @@ def get_opc(symbol: str, call: bool, put: bool) -> pd.DataFrame():
 
     """
 
-    if symbol.endswith('.SA'):
-        symbol = symbol.replace('.SA', '')
+    background_tasks.add_task(processamento_em_segundo_plano)
+
+    if not symbol.endswith('.SA'):
+        symbol += '.SA'
     else:
-        print('Procurando dados de opções do ativo selecionado...')
-        pass
+        print('Procurando dados de opções do ativo selecionado...')  
+
     chromedriver_autoinstaller.install()
     chrome_options = Options()
     chrome_options.add_argument('--headless')
@@ -1062,10 +1163,16 @@ def get_opc(symbol: str, call: bool, put: bool) -> pd.DataFrame():
     dfOPC = dfOPC[['Ticker', 'Tipo', 'Strike', 'A/I/OTM', 'Dist. (%) do Strike', 'Último', 'Var. (%)', 'Núm. de Neg.', 'Vol. Financeiro', 'Delta', 'Gamma', 'Theta ($)', 'Vega']]
     if call == True:
         dfCall = dfOPC.loc[dfOPC['Tipo'] == 'CALL']
-        return dfCall
+        tabular_data = dfCall.to_string(index=False)
+
+        return Response(content=tabular_data, media_type="text/plain")
+
     elif put == True:
         dfPut = dfOPC.loc[dfOPC['Tipo'] == 'PUT']
-        return dfPut
+        tabular_data = dfPut.to_string(index=False)
+
+        return Response(content=tabular_data, media_type="text/plain")
+
     else:
         driver.get(url)
         time.sleep(1.5)
@@ -1075,24 +1182,30 @@ def get_opc(symbol: str, call: bool, put: bool) -> pd.DataFrame():
         dfOPC = pd.read_html(str(table_html), decimal=',', thousands='.')
         dfOPC = dfOPC[0]
 
-            
-            
         dfOPC = dfOPC[['Ticker', 'Tipo', 'Strike', 'A/I/OTM', 'Dist. (%) do Strike', 'Último', 'Var. (%)', 'Núm. de Neg.', 'Vol. Financeiro', 'Delta', 'Gamma', 'Theta ($)', 'Vega']]
         if call == True:
             dfCall = dfOPC.loc[dfOPC['Tipo'] == 'CALL']
-            return dfCall
+            tabular_data = dfCall.to_string(index=False)
+
+            return Response(content=tabular_data, media_type="text/plain")
         elif put == True:
             dfPut = dfOPC.loc[dfOPC['Tipo'] == 'PUT']
-            return dfPut
+            tabular_data = dfPut.to_string(index=False)
+
+            return Response(content=tabular_data, media_type="text/plain")
         else:
-            return dfOPC
+            tabular_data = dfOPC.to_string(index=False)
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000, default="/options/{symbol}/info")
-responseHistory = Response(media_type="application/json")
+            return Response(content=tabular_data, media_type="text/plain")
+
+if __name__ == '__main__':
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/options/{symbol}/{call}/{put}/info")
+response = Response(media_type="application/json")
 
 
-@app.get("/options/blackScholes", response_model=None)
+## CALCULO DO BLACK-SCHOLES ##
+
+@app.get("/options/blackScholes/{call_or_put}/{symbol}/{preco}/{strike}/{diasUteis}", response_model=None)
 def black_scholes(Call_or_Put = Union['call', 'put'], ativo= str, preco = float, strike= float, diasUteis= int) -> str:
     
     """
@@ -1135,10 +1248,9 @@ def black_scholes(Call_or_Put = Union['call', 'put'], ativo= str, preco = float,
     else:
         print('As opções validas sao somente as de CALL e PUT')
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000, default="/options/blackScholes")
-responseHistory = Response(media_type="application/json")
-
+if __name__ == '__main__':
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/options/blackScholes/{call_or_put}/{symbol}/{preco}/{strike}/{diasUteis}")
+response = Response(media_type="application/json")
 
 
 def carteira(dados= list):
@@ -1150,15 +1262,20 @@ def carteira(dados= list):
     conexao.close()
 
 
+## PREVISAO DE VALORES DE AÇÕES ##
 
-def predict_stock_value(symbol: str) -> float:
+@app.get("/stocks/predicaoAcao/{symbol}", response_model=None)
+def predict_stock_value(symbol: str, background_tasks: BackgroundTasks) -> dict:
+
+    background_tasks.add_task(processamento_em_segundo_plano)
+
     if not symbol.endswith('.SA'):
-        symbol = symbol + '.SA'
+        symbol += '.SA'
     else:
         print('Procurando dados de opções do ativo selecionado...')
 
     # Carrega os dados do arquivo CSV
-    df = yf.download(symbol, period="1y")
+    df = yf.download('PETR4.SA', period="1y")
 
     # Normalização dos dados
     scaler = MinMaxScaler()
@@ -1192,24 +1309,29 @@ def predict_stock_value(symbol: str) -> float:
     model.compile(optimizer='adam', loss='mean_squared_error', run_eagerly=True)
 
     # Treina o modelo
-    model.fit(train_windows, train_labels, epochs=85, batch_size=56)
+    model.fit(train_windows, train_labels, epochs=48, batch_size=128)
 
     # Faz a previsão com os dados de teste
     predictions = model.predict(test_windows)
 
-    # Inverte a transformação do scaler
+    # Inverte a transformação do scaler e ajusta a escala
     predicted_values = scaler.inverse_transform(predictions.reshape(-1, 1))
 
-    # Retorna a previsão de valor para a ação
-    return predicted_values[-1][0]
+    predicted_values = predicted_values[-1]
+    predicted_values = str(predicted_values)
+    json_data = {"Previsao do Valor": predicted_values}
+    
+    return json_data
 
-# Exemplo de uso
-symbol = 'VALE3.SA'
-previsao = predict_stock_value(symbol)
-print(f'A previsão de valor para a ação {symbol} é {previsao:.2f}')
+if __name__ == '__main__':
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/stocks/predicaoAcao/{symbol}")
+response = Response(media_type="application/json")
 
-@app.get("/ibovespa", response_model=None)
-def pega_ibov():
+
+##  INDICE DO IBOVESPA (ABERTURA) ##
+
+@app.get("/indices/ibovespa", response_model=None)
+def pega_ibov() -> dict:
     market = yf.Ticker("^BVSP") # Índice Bovespa como mercado de referência
     infoMarket = market.info
 
@@ -1220,18 +1342,22 @@ def pega_ibov():
     return json_data
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="/ibovespa")
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/indices/ibovespa")
 response = Response(media_type="application/json")
 
-@app.get("/dolar", response_model=None)
-def pega_ibov():
+
+## VALOR DO DOLAR (ABERTURA) ##
+
+@app.get("/indices/dolar", response_model=None)
+def pega_dolar() -> dict:
     data = yf.download("USDBRL=X", period="1d")
 
     # Crie um objeto JSON com as informações da ação
-    json_data = {'Valor Abertura': data['Close'][0]}
+    json_data = {'Valor Abertura': round(data['Close'][0], 2)}
     
     return json_data
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host='127.0.0.1', port=8000, default="/ibovespa")
+    uvicorn.run("BBFinance:app", host='172.16.61.16', port=8000, default="/indices/dolar")
 response = Response(media_type="application/json")
+
