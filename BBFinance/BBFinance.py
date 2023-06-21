@@ -24,7 +24,11 @@ import time
 #BIBLIOTECAS DE CHAMADAS DE API
 from fastapi import FastAPI, Response, BackgroundTasks
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.wsgi import WSGIMiddleware
+from starlette.responses import Response
+from starlette.types import ASGIApp
 import uvicorn
+import logging
 
 #BIBLIOTECAS DE ANALISE DE DATAFRAMES, DADOS E CRIAÇAO DE CLASSES
 import pandas as pd
@@ -51,6 +55,24 @@ sevenD = seven_days_ago.strftime('%Y-%m-%d')
 currently = today.strftime('%Y-%m-%d')
 
 app = FastAPI()
+
+log_file = r"Q:\Squad Dev RPA\API\app.log"
+logging.basicConfig(
+    filename=log_file,
+    filemode="a",
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+
+@app.middleware("http")
+async def log_requests(request, call_next):
+    response = await call_next(request)
+    
+    # Verifica se a chamada não foi bem-sucedida (código de status diferente de 200)
+    if response.status_code != 200:
+        logging.error(f"Request {request.method} {request.url} retornou o código {response.status_code}")
+    
+    return response
 # templates = Jinja2Templates(directory="C:\\Users\\Luis\\ProjetoFin\\BBFinance\\BBFinance\\templates")
 
 # app.mount("/static", StaticFiles(directory="BBFinance\static"), name="static")
@@ -194,14 +216,14 @@ def get_stock_history(symbol: str, background_tasks: BackgroundTasks, period: st
     history = stock.history(period=period)
     
     if history.empty:
-        return {"error": print("No data found")}
+        return {"error": print("Nenhum dado encontrado")}
     else:
         history_dict = history.to_dict(orient="list")
         history_df = pd.DataFrame.from_dict(history_dict).reset_index(drop=False)
 
-        tabular_data = history_df.to_string(index=False)
+        tabular_data = history_df.to_json(orient="records", indent=4)
 
-        return Response(content=tabular_data, media_type="text/plain")
+        return Response(content=tabular_data, media_type="application/json")
     
         # json_data = {'symbol': symbol,
         # "history":  history_df.to_dict(orient="records"),

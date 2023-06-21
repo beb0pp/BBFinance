@@ -1,3 +1,4 @@
+*.md
 BBFdocs/
 BBFinance.egg-info/
 build/
