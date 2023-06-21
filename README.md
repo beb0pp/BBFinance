@@ -45,29 +45,29 @@ Para instalar a biblioteca, use o seguinte comando:
 ```
 import BBFinance as bb
 
->>> info = bb.get_info('PETR4.SA')
+>>> info = bb.get_info('PETR4')
 
->>> info = bb.get_stock_history(symbol= 'PETR4.SA', period= '1y')
+>>> info = bb.get_stock_history(symbol= 'PETR4', period= '1y')
 
->>> info = bb.get_stock_trend(symbol= 'PETR4.SA')
+>>> info = bb.get_stock_trend(symbol= 'PETR4')
 
->>> info = bb.get_stock_technicals(symbol= 'PETR4.SA')
+>>> info = bb.get_stock_technicals(symbol= 'PETR4')
 
->>> info = bb.get_volatility(symbol= 'PETR4.SA', start_date= '2023-01-01', end_date= '2023-12-01')
+>>> info = bb.get_volatility(symbol= 'PETR4', start_date= '2023-01-01', end_date= '2023-12-01')
 
->>> info = bb.get_beta(symbol= 'PETR4.SA')
+>>> info = bb.get_beta(symbol= 'PETR4')
 
->>> info = bb.get_var(symbol= 'PETR4.SA',confidence_level= 0.95, lookback_period= 30)
+>>> info = bb.get_var(symbol= 'PETR4',confidence_level= 0.95, lookback_period= 30)
 
->>> info = bb.asset_portfolio(symbols= 'PETR4.SA' | ['PETR4.SA', 'VALE3.SA'], start_date= '2023-01-01', end_date= '2023-12-01') #Incluir uma lista de ativos (['PETR4.SA', 'VALE3.SA']) ou ativo unico ('PETR4.SA')
+>>> info = bb.asset_portfolio(symbols= 'PETR4' | ['PETR4', 'VALE3'], start_date= '2023-01-01', end_date= '2023-12-01') #Incluir uma lista de ativos (['PETR4', 'VALE3']) ou ativo unico ('PETR4')
 
->>> info = bb.markowitz_allocation(symbols= ['PETR4.SA', 'VALE3.SA'], start_date= '2023-01-01', end_date= '2023-12-01')
+>>> info = bb.markowitz_allocation(symbols= ['PETR4', 'VALE3'], start_date= '2023-01-01', end_date= '2023-12-01')
 
->>> info = bb.get_funds(symbol= 'PETR4.SA')
+>>> info = bb.get_funds(symbol= 'PETR4')
 
 >>> info = bb.compare_setor_funds(setor: 'Corporativo', rentabilidade_min = 1)
 
->>> info = bb.compare_funds(listfund= ['MXRF11.SA', MGFF11.SA] | fund_1= 'MXRF11.SA', fund_2= 'MGFF11.SA') #Incluir uma lista (parametro: listfund) ou fundos separados (parametros: fund_1, fund_2)
+>>> info = bb.compare_funds(listfund= ['MXRF11', MGFF11] | fund_1= 'MXRF11', fund_2= 'MGFF11') #Incluir uma lista (parametro: listfund) ou fundos separados (parametros: fund_1, fund_2)
 
 >>> info = bb.best_assets(perfil= 'Agressivo')
 
