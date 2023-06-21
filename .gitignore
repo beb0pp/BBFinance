@@ -1,5 +1,5 @@
-/.BBFdocs
-/.BBFinance.egg-info
-/.build
-/.dist
-/.docs
+BBFdocs
+BBFinance.egg-info
+build
+dist
+docs
